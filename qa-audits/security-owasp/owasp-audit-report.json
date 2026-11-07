@@ -1,0 +1,271 @@
+{
+  "project": "EduDistribuida / USCO-Net — Plataforma Académica Descentralizada",
+  "standard": "OWASP Top 10 (2021 / 2025)",
+  "executedAt": "2026-11-07T05:00:22.176Z",
+  "summary": {
+    "totalCategoriesAudited": 10,
+    "passedCategories": 10,
+    "totalSecurityAssertions": 22,
+    "passedSecurityAssertions": 22,
+    "complianceScorePct": 100,
+    "overallStatus": "PASSED_100_PERCENT"
+  },
+  "categories": [
+    {
+      "categoryId": "A01:2021/2025",
+      "title": "Broken Access Control (JWT Guard, RBAC & Anti-IDOR)",
+      "status": "PASSED",
+      "controlImplemented": "jwtAuthMiddleware + rbacMiddleware([TEACHER, ADMIN]) + studentIdorGuardMiddleware + Supabase RLS",
+      "tests": [
+        {
+          "testCase": "Acceso sin JWT a GET /api/v1/auth/me",
+          "payload": "Header Authorization omitido",
+          "expectedHttpCode": 401,
+          "actualHttpCode": 401,
+          "errorCode": "MISSING_AUTH_TOKEN",
+          "passed": true
+        },
+        {
+          "testCase": "Escalada vertical: Rol STUDENT intentando modificar notas en PUT /api/v1/grades",
+          "payload": "Bearer <STUDENT_JWT> + { cut1: 5.0, cut2: 5.0, cut3: 5.0 }",
+          "expectedHttpCode": 403,
+          "actualHttpCode": 403,
+          "errorCode": "UNAUTHORIZED_ROLE",
+          "passed": true
+        },
+        {
+          "testCase": "Ataque IDOR horizontal: Estudiante 20221203806 consultando expediente de 20231104512 en GET /api/v1/students/20231104512/summary",
+          "payload": "GET /api/v1/students/20231104512/summary con Bearer <20221203806_JWT>",
+          "expectedHttpCode": 403,
+          "actualHttpCode": 403,
+          "errorCode": "IDOR_ACCESS_DENIED",
+          "passed": true
+        },
+        {
+          "testCase": "Ataque IDOR en matrícula: Estudiante 20221203806 intentando inscribir materia para 20231104512",
+          "payload": "POST /api/v1/enrollments { studentId: \"20231104512\" }",
+          "expectedHttpCode": 403,
+          "actualHttpCode": 403,
+          "errorCode": "IDOR_ENROLLMENT_FORBIDDEN",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A02:2021/2025",
+      "title": "Cryptographic Failures (JWT HMAC-SHA256, Bcrypt Cost=10 & SHA-256 Signatures)",
+      "status": "PASSED",
+      "controlImplemented": "JwtTokenAdapter (HMAC-SHA256 con SUPABASE_JWT_SECRET) + bcryptjs (10 rounds) + Firma SHA-256 en Certificados PDF",
+      "tests": [
+        {
+          "testCase": "Rechazo de JWT con firma criptográfica adulterada (invalid signature)",
+          "payload": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpX...",
+          "expectedHttpCode": 401,
+          "actualHttpCode": 401,
+          "errorCode": "INVALID_JWT_TOKEN",
+          "passed": true
+        },
+        {
+          "testCase": "Rechazo de ataque de degradación de algoritmo JWT (alg: \"none\")",
+          "payload": "Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0....",
+          "expectedHttpCode": 401,
+          "actualHttpCode": 401,
+          "errorCode": "INVALID_JWT_TOKEN",
+          "passed": true
+        },
+        {
+          "testCase": "Verificación de hashing de contraseñas con Bcrypt (Salt Rounds = 10) y firma SHA-256 (64 hex chars)",
+          "payload": "Bcrypt prefix=$2a$10$ | SHA-256=790a8abbf7d460a24ffdb58d...",
+          "expectedHttpCode": 200,
+          "actualHttpCode": 200,
+          "errorCode": "CRYPTO_VERIFIED",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A03:2021/2025",
+      "title": "Injection (SQLi, Reflected/Stored XSS & Chatbot Prompt Injection)",
+      "status": "PASSED",
+      "controlImplemented": "payloadSanitizationMiddleware + Esquemas Zod Estrictos + Consultas Parametrizadas Prisma ORM",
+      "tests": [
+        {
+          "testCase": "Inyección SQL (SQLi) en POST /api/v1/auth/login",
+          "payload": "' OR '1'='1'; DROP TABLE users; --",
+          "expectedHttpCode": 400,
+          "actualHttpCode": 400,
+          "errorCode": "MALICIOUS_PAYLOAD_DETECTED",
+          "passed": true
+        },
+        {
+          "testCase": "Cross-Site Scripting (XSS) en POST /api/v1/enrollments",
+          "payload": "<script>alert(1)</script>",
+          "expectedHttpCode": 400,
+          "actualHttpCode": 400,
+          "errorCode": "MALICIOUS_PAYLOAD_DETECTED",
+          "passed": true
+        },
+        {
+          "testCase": "Inyección SQL (DROP TABLE) en POST /api/v1/chat/message (:4003)",
+          "payload": "' OR '1'='1'; DROP TABLE users; --",
+          "expectedHttpCode": 400,
+          "actualHttpCode": 400,
+          "errorCode": "VALIDATION_ERROR_OWASP_A03",
+          "passed": true
+        },
+        {
+          "testCase": "Inyección XSS (<script>alert(1)</script>) en POST /api/v1/chat/message (:4003)",
+          "payload": "<script>alert(1)</script>",
+          "expectedHttpCode": 400,
+          "actualHttpCode": 400,
+          "errorCode": "VALIDATION_ERROR_OWASP_A03",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A04:2021/2025",
+      "title": "Insecure Design (Hexagonal Domain Invariants: Quota Lock & Anti-Duplicate Enrollment)",
+      "status": "PASSED",
+      "controlImplemented": "EnrollmentDomainService + Transacciones Atómicas Prisma ($transaction) con bloqueo de cupos",
+      "tests": [
+        {
+          "testCase": "Bloqueo de sobrecupo cuando occupiedQuota (25) >= maxQuota (25) en EnrollmentDomainService",
+          "payload": "{ maxQuota: 25, occupiedQuota: 25, courseCode: \"ISW-401\" }",
+          "expectedHttpCode": 409,
+          "actualHttpCode": 409,
+          "errorCode": "QUOTA_EXCEEDED",
+          "passed": true
+        },
+        {
+          "testCase": "Prevención de doble matrícula en la misma asignatura y periodo activo (2026-2)",
+          "payload": "{ courseCode: \"ISW-401\", periodCode: \"2026-2\", status: \"ACTIVE\" }",
+          "expectedHttpCode": 409,
+          "actualHttpCode": 409,
+          "errorCode": "DUPLICATE_ENROLLMENT",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A05:2021/2025",
+      "title": "Security Misconfiguration (Helmet CSP, HSTS, X-Frame-Options, nosniff & CORS)",
+      "status": "PASSED",
+      "controlImplemented": "Helmet Middleware + Política explícita de cabeceras HTTP y límite JSON",
+      "tests": [
+        {
+          "testCase": "Verificación de cabecera Content-Security-Policy (CSP)",
+          "payload": "GET /api/v1/health",
+          "expectedHttpCode": 200,
+          "actualHttpCode": 200,
+          "errorCode": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data: https:;object-src 'none';script-src 'self' 'unsafe-inline';script-src-attr 'none';style-src 'self' 'unsafe-inline';upgrade-insecure-requests",
+          "passed": true
+        },
+        {
+          "testCase": "Verificación de X-Content-Type-Options: nosniff y X-Frame-Options: DENY",
+          "payload": "X-Content-Type-Options=nosniff | X-Frame-Options=DENY",
+          "expectedHttpCode": 200,
+          "actualHttpCode": 200,
+          "errorCode": "nosniff / DENY",
+          "passed": true
+        },
+        {
+          "testCase": "Verificación de Strict-Transport-Security (HSTS preload) y CORS",
+          "payload": "HSTS=max-age=31536000; includeSubDomains; preload | CORS=*",
+          "expectedHttpCode": 200,
+          "actualHttpCode": 200,
+          "errorCode": "max-age=31536000; includeSubDomains; preload",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A06:2021/2025",
+      "title": "Vulnerable and Outdated Components (SBOM & Monorepo Dependency Pinning)",
+      "status": "PASSED",
+      "controlImplemented": "NPM Workspaces con lockfile determinista (package-lock.json) y librerías LTS actualizadas",
+      "tests": [
+        {
+          "testCase": "Verificación de versiones seguras en Core Academic, Worker BullMQ y Web Astro 5",
+          "payload": "helmet=^8.0.0, zod=^3.23.8, bullmq=^4.17.0, astro=^5.1.0",
+          "expectedHttpCode": 200,
+          "actualHttpCode": 200,
+          "errorCode": "ZERO_CRITICAL_CVES",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A07:2021/2025",
+      "title": "Identification and Authentication Failures (Brute-Force Rate Limiting HTTP 429)",
+      "status": "PASSED",
+      "controlImplemented": "express-rate-limit (max: 8 intentos fallidos / 60s por IP con skipSuccessfulRequests: true)",
+      "tests": [
+        {
+          "testCase": "Simulación de ataque de fuerza bruta (9 intentos fallidos consecutivos en POST /api/v1/auth/login)",
+          "payload": "9x POST /api/v1/auth/login con contraseña incorrecta desde IP 192.168.99.201",
+          "expectedHttpCode": 429,
+          "actualHttpCode": 429,
+          "errorCode": "TOO_MANY_LOGIN_ATTEMPTS",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A08:2021/2025",
+      "title": "Software and Data Integrity Failures (SHA-256 Digital Signature & PDF Verification)",
+      "status": "PASSED",
+      "controlImplemented": "generateCertificateSignatureHash (SHA-256 con salt criptográfico) + Código QR verificable en PDFKit",
+      "tests": [
+        {
+          "testCase": "Detección de alteración de datos en certificado (Avalancha criptográfica SHA-256) y validación binaria %PDF-1.3",
+          "payload": "Certificado USCO-2026-8841.pdf (7259 bytes) | SHA-256=824c6725d24eb64e1697f280...",
+          "expectedHttpCode": 200,
+          "actualHttpCode": 200,
+          "errorCode": "SHA256_INTEGRITY_VERIFIED",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A09:2021/2025",
+      "title": "Security Logging and Monitoring Failures (ChatInteractionLog & Distributed Telemetry)",
+      "status": "PASSED",
+      "controlImplemented": "Auditoría persistente en ChatInteractionLog + Healthchecks (/api/v1/health) + Telemetría BullMQ (/metrics/queues)",
+      "tests": [
+        {
+          "testCase": "Trazabilidad de interacciones en GET /api/v1/chat/history/:sessionId y telemetría /api/v1/health",
+          "payload": "sessionId=owasp-a09-trace-session",
+          "expectedHttpCode": 200,
+          "actualHttpCode": 200,
+          "errorCode": "AUDIT_LOG_RECORDED",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "categoryId": "A10:2021/2025",
+      "title": "Server-Side Request Forgery (SSRF Origin Whitelist & Protocol Guard)",
+      "status": "PASSED",
+      "controlImplemented": "Lista blanca estricta de orígenes internos (localhost:4001/4002/4003) y bloqueo de esquemas file:// y metadatos cloud",
+      "tests": [
+        {
+          "testCase": "Bloqueo de intento SSRF hacia endpoint de metadatos cloud (http://169.254.169.254/latest/meta-data/)",
+          "payload": "{ callbackUrl: \"http://169.254.169.254/latest/meta-data/...\" }",
+          "expectedHttpCode": 400,
+          "actualHttpCode": 400,
+          "errorCode": "SSRF_ORIGIN_BLOCKED",
+          "passed": true
+        },
+        {
+          "testCase": "Bloqueo de esquema local no autorizado (file:///etc/passwd)",
+          "payload": "{ callbackUrl: \"file:///etc/passwd\" }",
+          "expectedHttpCode": 400,
+          "actualHttpCode": 400,
+          "errorCode": "SSRF_ORIGIN_BLOCKED",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

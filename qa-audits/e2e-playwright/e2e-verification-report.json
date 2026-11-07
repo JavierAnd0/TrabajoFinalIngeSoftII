@@ -1,0 +1,134 @@
+{
+  "project": "EduDistribuida (USCO-Net) — Plataforma Académica Distribuida Multi-Sede",
+  "phase": "Fase 5 — Validación de Aceptación End-to-End (Playwright + Contratos SSR/Hexagonal)",
+  "executedAt": "2026-11-07T05:00:22.546Z",
+  "totalDurationMs": 160,
+  "summary": {
+    "totalFlows": 5,
+    "passedFlows": 5,
+    "failedFlows": 0,
+    "passRate": "100%"
+  },
+  "astroBuildVerification": {
+    "ssrPagesCompiled": [
+      "dist/server/pages/login.astro.mjs",
+      "dist/server/pages/dashboard/estudiante.astro.mjs",
+      "dist/server/pages/dashboard/admin.astro.mjs"
+    ],
+    "clientIslandsVerified": 24
+  },
+  "flows": [
+    {
+      "flowId": "E2E-01",
+      "name": "Carga de Astro SSR (/login), selección de cuenta demo de estudiante y autenticación JWT exitosa",
+      "status": "PASSED",
+      "latencyMs": 57,
+      "selectorsVerified": [
+        "data-testid=\"demo-student-btn\"",
+        "data-testid=\"login-email\"",
+        "data-testid=\"login-password\"",
+        "data-testid=\"login-submit\""
+      ],
+      "evidence": {
+        "authenticatedUser": "Álvaro Javier Andrade",
+        "studentCode": "20221203806",
+        "campusCode": "NEI",
+        "jwtIssued": true,
+        "redirectTarget": "/dashboard/estudiante"
+      }
+    },
+    {
+      "flowId": "E2E-02",
+      "name": "Visualización del Dashboard Académico Multi-Sede, 4 asignaturas matriculadas y Simulador de Corte 3",
+      "status": "PASSED",
+      "latencyMs": 3,
+      "selectorsVerified": [
+        "data-testid=\"pga-card\"",
+        "data-testid=\"grades-table\"",
+        "data-testid=\"cut3-simulator-card\"",
+        "data-testid=\"simulator-course-select\"",
+        "data-testid=\"simulator-cut3-input\"",
+        "data-testid=\"simulator-projected-final\""
+      ],
+      "evidence": {
+        "initialPga": 4.13,
+        "enrolledCoursesCount": 4,
+        "simulatedCourse": "ISW-403 — Mantenimiento y Pruebas de Software",
+        "requiredCut3ForThree": 1.35,
+        "hypotheticalCut3": 4.5,
+        "projectedFinalGrade": 4.26
+      }
+    },
+    {
+      "flowId": "E2E-03",
+      "name": "Inscripción en 1 clic de nueva asignatura disponible (ISW-405 Inteligencia Artificial) y actualización de cupos",
+      "status": "PASSED",
+      "latencyMs": 5,
+      "selectorsVerified": [
+        "data-testid=\"section-card-ISW-405\"",
+        "data-testid=\"enroll-btn-ISW-405\"",
+        "data-testid=\"enrollment-feedback\"",
+        "data-testid=\"enrolled-badge-ISW-405\""
+      ],
+      "evidence": {
+        "enrolledCourse": "ISW-405 - Inteligencia Artificial",
+        "quotaBefore": "15 / 25 (10 libres)",
+        "quotaAfter": "16 / 25 (9 libres)",
+        "updatedEnrolledCoursesCount": 5,
+        "updatedEnrolledCredits": 16
+      }
+    },
+    {
+      "flowId": "E2E-04",
+      "name": "Interacción en vivo con el Widget Flotante del Chatbot Académico Híbrido (Notas, Simulación C3 y Certificado)",
+      "status": "PASSED",
+      "latencyMs": 4,
+      "selectorsVerified": [
+        "data-testid=\"chatbot-toggle-btn\"",
+        "data-testid=\"chatbot-window\"",
+        "data-testid=\"chatbot-mode-selector\"",
+        "data-testid=\"chatbot-input\"",
+        "data-testid=\"chatbot-send-btn\"",
+        "data-testid=\"chatbot-grades-attachment\"",
+        "data-testid=\"chatbot-certificate-attachment\"",
+        "data-testid=\"chatbot-certificate-download-btn\""
+      ],
+      "evidence": {
+        "interactionsExecuted": 3,
+        "intentsResolved": [
+          "INTENT_GRADES",
+          "INTENT_NEEDED_SCORE",
+          "INTENT_GENERATE_CERTIFICATE"
+        ],
+        "engineUsed": "DETERMINISTIC_RULES",
+        "certificateGeneratedFromChat": "USCO-2026-4972E7E3"
+      }
+    },
+    {
+      "flowId": "E2E-05",
+      "name": "Solicitud asíncrona de certificado académico (QUEUED -> PROCESSING -> COMPLETED) y generación PDF con QR y SHA-256",
+      "status": "PASSED",
+      "latencyMs": 33,
+      "selectorsVerified": [
+        "data-testid=\"certificate-type-select\"",
+        "data-testid=\"request-certificate-btn\"",
+        "data-testid=\"certificate-job-status-card\"",
+        "data-testid=\"certificate-job-state\"",
+        "data-testid=\"certificate-download-link\""
+      ],
+      "evidence": {
+        "jobId": "88888888-8888-4888-8888-888888888806",
+        "verificationCode": "USCO-2026-8210FAF0",
+        "stateTransitions": [
+          "QUEUED",
+          "PROCESSING",
+          "COMPLETED"
+        ],
+        "digitalSignatureHash": "b1110567121a176b32644e9c63ec7e59663bf8cadd0b18b3f6fa025d24c5159f",
+        "pdfSizeBytes": 7424,
+        "pdfHeaderMagic": "%PDF-",
+        "downloadUrl": "http://localhost:4002/public/certificates/88888888-8888-4888-8888-888888888806.pdf"
+      }
+    }
+  ]
+}

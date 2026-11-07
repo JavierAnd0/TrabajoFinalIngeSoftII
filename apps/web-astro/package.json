@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev --port 4321 --host",
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --port 4321 --host",
     "start": "node ./dist/server/entry.mjs",
-    "build": "astro build",
-    "preview": "astro preview --port 4321 --host"
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview --port 4321 --host"
   },
   "dependencies": {
     "@astrojs/node": "^9.0.0",

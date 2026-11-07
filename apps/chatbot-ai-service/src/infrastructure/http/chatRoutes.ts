@@ -93,7 +93,8 @@ export function createChatRouter(
    * GET /api/v1/chat/history/:sessionId
    */
   router.get('/history/:sessionId', async (req: Request, res: Response) => {
-    const sessionId = (req.params.sessionId || '').trim();
+    const rawSessionId = req.params.sessionId;
+    const sessionId = (Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId || '').trim();
     if (!sessionId || MALICIOUS_INJECTION_REGEX.test(sessionId)) {
       res.status(400).json({
         success: false,

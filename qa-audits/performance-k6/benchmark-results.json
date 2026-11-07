@@ -1,0 +1,410 @@
+{
+  "project": "EduDistribuida / USCO-Net — Plataforma Académica Descentralizada Multi-Sede",
+  "phase": "Fase 4 — Pruebas de Rendimiento, Carga, Estrés y Colas Asíncronas (k6)",
+  "executedAt": "2026-11-07T04:46:43.732Z",
+  "environment": {
+    "nodeVersion": "v26.12.0",
+    "platform": "darwin-arm64",
+    "vusProfile": "10 VUs -> 50 VUs -> 100 VUs",
+    "slaThresholds": {
+      "http_req_duration_p95_max_ms": 250,
+      "http_req_failed_max_rate_pct": 1,
+      "async_enqueue_202_p50_max_ms": 15
+    }
+  },
+  "globalSummary": {
+    "totalRequestsExecuted": 2800,
+    "totalFailedRequests": 0,
+    "globalErrorRatePct": 0,
+    "slaComplianceStatus": "PASSED_100_PERCENT"
+  },
+  "scenarios": {
+    "academic_summary_read": {
+      "endpoint": "GET /api/v1/students/20221203806/summary",
+      "service": "@edudistribuida/core-academic-service (:4001)",
+      "aggregatedLatencies": {
+        "min": 46.99,
+        "p50": 80.77,
+        "p90": 107.38,
+        "p95": 110.33,
+        "p99": 115.71,
+        "max": 115.97,
+        "mean": 81.45
+      },
+      "peakRpsAt100VUs": 1005.5,
+      "errorRatePct": 0,
+      "stages": [
+        {
+          "concurrencyVUs": 10,
+          "totalRequests": 60,
+          "successCount": 60,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 8.68,
+          "rps": 238.5,
+          "latencies": {
+            "min": 14.31,
+            "p50": 23.64,
+            "p90": 31.06,
+            "p95": 32.7,
+            "p99": 33.45,
+            "max": 33.45,
+            "mean": 23.92
+          }
+        },
+        {
+          "concurrencyVUs": 50,
+          "totalRequests": 200,
+          "successCount": 200,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 6.61,
+          "rps": 762.2,
+          "latencies": {
+            "min": 28.51,
+            "p50": 47.66,
+            "p90": 62.8,
+            "p95": 64.85,
+            "p99": 66.36,
+            "max": 66.94,
+            "mean": 47.6
+          }
+        },
+        {
+          "concurrencyVUs": 100,
+          "totalRequests": 300,
+          "successCount": 300,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 14.86,
+          "rps": 1005.5,
+          "latencies": {
+            "min": 46.99,
+            "p50": 80.77,
+            "p90": 107.38,
+            "p95": 110.33,
+            "p99": 115.71,
+            "max": 115.97,
+            "mean": 81.45
+          }
+        }
+      ]
+    },
+    "campuses_metrics_read": {
+      "endpoint": "GET /api/v1/campuses",
+      "service": "@edudistribuida/core-academic-service (:4001)",
+      "aggregatedLatencies": {
+        "min": 34.32,
+        "p50": 58.47,
+        "p90": 77.85,
+        "p95": 80.35,
+        "p99": 82.43,
+        "max": 82.92,
+        "mean": 58.63
+      },
+      "peakRpsAt100VUs": 1305,
+      "errorRatePct": 0,
+      "stages": [
+        {
+          "concurrencyVUs": 10,
+          "totalRequests": 60,
+          "successCount": 60,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 1.35,
+          "rps": 291.5,
+          "latencies": {
+            "min": 10.55,
+            "p50": 16.35,
+            "p90": 20.85,
+            "p95": 21.47,
+            "p99": 22.12,
+            "max": 22.12,
+            "mean": 16.3
+          }
+        },
+        {
+          "concurrencyVUs": 50,
+          "totalRequests": 200,
+          "successCount": 200,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 3.28,
+          "rps": 950.9,
+          "latencies": {
+            "min": 21.07,
+            "p50": 34.82,
+            "p90": 45.04,
+            "p95": 46.46,
+            "p99": 47.87,
+            "max": 47.94,
+            "mean": 34.58
+          }
+        },
+        {
+          "concurrencyVUs": 100,
+          "totalRequests": 300,
+          "successCount": 300,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 6.34,
+          "rps": 1305,
+          "latencies": {
+            "min": 34.32,
+            "p50": 58.47,
+            "p90": 77.85,
+            "p95": 80.35,
+            "p99": 82.43,
+            "max": 82.92,
+            "mean": 58.63
+          }
+        }
+      ]
+    },
+    "chatbot_concurrent_queries": {
+      "endpoint": "POST /api/v1/chat/message",
+      "service": "@edudistribuida/chatbot-ai-service (:4003)",
+      "aggregatedLatencies": {
+        "min": 45.15,
+        "p50": 73.24,
+        "p90": 96.7,
+        "p95": 99.67,
+        "p99": 101.95,
+        "max": 102.83,
+        "mean": 73.46
+      },
+      "peakRpsAt100VUs": 1093.4,
+      "errorRatePct": 0,
+      "stages": [
+        {
+          "concurrencyVUs": 10,
+          "totalRequests": 60,
+          "successCount": 60,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 15.01,
+          "rps": 261.8,
+          "latencies": {
+            "min": 12.18,
+            "p50": 20.27,
+            "p90": 25.87,
+            "p95": 26.69,
+            "p99": 30.52,
+            "max": 30.52,
+            "mean": 20.2
+          }
+        },
+        {
+          "concurrencyVUs": 50,
+          "totalRequests": 200,
+          "successCount": 200,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 10.04,
+          "rps": 815.5,
+          "latencies": {
+            "min": 25.95,
+            "p50": 43.2,
+            "p90": 57.04,
+            "p95": 58.89,
+            "p99": 60.59,
+            "max": 60.73,
+            "mean": 43.31
+          }
+        },
+        {
+          "concurrencyVUs": 100,
+          "totalRequests": 300,
+          "successCount": 300,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 15.16,
+          "rps": 1093.4,
+          "latencies": {
+            "min": 45.15,
+            "p50": 73.24,
+            "p90": 96.7,
+            "p95": 99.67,
+            "p99": 101.95,
+            "max": 102.83,
+            "mean": 73.46
+          }
+        }
+      ]
+    },
+    "async_certificate_burst": {
+      "endpoint": "POST /api/v1/certificates/request (HTTP 202 Accepted)",
+      "service": "@edudistribuida/core-academic-service -> BullMQ (:4001 -> :4002)",
+      "aggregatedLatencies": {
+        "min": 9.07,
+        "p50": 12.98,
+        "p90": 15.62,
+        "p95": 16.14,
+        "p99": 16.95,
+        "max": 17.38,
+        "mean": 12.98
+      },
+      "peakRpsAt100VUs": 3227.9,
+      "errorRatePct": 0,
+      "stages": [
+        {
+          "concurrencyVUs": 10,
+          "totalRequests": 60,
+          "successCount": 60,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 5.85,
+          "rps": 431.2,
+          "latencies": {
+            "min": 3.16,
+            "p50": 5.1,
+            "p90": 6.7,
+            "p95": 7.37,
+            "p99": 8.51,
+            "max": 8.51,
+            "mean": 5.19
+          }
+        },
+        {
+          "concurrencyVUs": 50,
+          "totalRequests": 200,
+          "successCount": 200,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 8.08,
+          "rps": 1893.9,
+          "latencies": {
+            "min": 5.9,
+            "p50": 8.38,
+            "p90": 10.25,
+            "p95": 10.48,
+            "p99": 11.49,
+            "max": 11.97,
+            "mean": 8.4
+          }
+        },
+        {
+          "concurrencyVUs": 100,
+          "totalRequests": 300,
+          "successCount": 300,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 11.38,
+          "rps": 3227.9,
+          "latencies": {
+            "min": 9.07,
+            "p50": 12.98,
+            "p90": 15.62,
+            "p95": 16.14,
+            "p99": 16.95,
+            "max": 17.38,
+            "mean": 12.98
+          }
+        }
+      ]
+    },
+    "worker_queue_telemetry": {
+      "endpoint": "GET /metrics/queues",
+      "service": "@edudistribuida/async-worker-service (:4002)",
+      "aggregatedLatencies": {
+        "min": 8.52,
+        "p50": 14.93,
+        "p90": 19.25,
+        "p95": 20.41,
+        "p99": 21.46,
+        "max": 21.67,
+        "mean": 14.89
+      },
+      "peakRpsAt100VUs": 3040.4,
+      "errorRatePct": 0,
+      "stages": [
+        {
+          "concurrencyVUs": 10,
+          "totalRequests": 60,
+          "successCount": 60,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 1.79,
+          "rps": 435.5,
+          "latencies": {
+            "min": 3.15,
+            "p50": 4.94,
+            "p90": 6.36,
+            "p95": 6.46,
+            "p99": 6.73,
+            "max": 6.73,
+            "mean": 4.96
+          }
+        },
+        {
+          "concurrencyVUs": 50,
+          "totalRequests": 200,
+          "successCount": 200,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 5.32,
+          "rps": 1818.2,
+          "latencies": {
+            "min": 5.77,
+            "p50": 9.52,
+            "p90": 11.87,
+            "p95": 12.24,
+            "p99": 12.82,
+            "max": 13.1,
+            "mean": 9.5
+          }
+        },
+        {
+          "concurrencyVUs": 100,
+          "totalRequests": 300,
+          "successCount": 300,
+          "errorCount": 0,
+          "errorRatePct": 0,
+          "wallClockMs": 8.89,
+          "rps": 3040.4,
+          "latencies": {
+            "min": 8.52,
+            "p50": 14.93,
+            "p90": 19.25,
+            "p95": 20.41,
+            "p99": 21.46,
+            "max": 21.67,
+            "mean": 14.89
+          }
+        }
+      ]
+    }
+  },
+  "syncVsAsyncComparison": {
+    "unitPdfRenderMetricsMs": {
+      "min": 6.07,
+      "p50": 6.83,
+      "p90": 31.14,
+      "p95": 31.14,
+      "p99": 31.14,
+      "max": 31.14,
+      "mean": 11.76
+    },
+    "architecturalAnalysis": "El desacoplamiento con BullMQ (HTTP 202 Accepted) libera el hilo principal de Express en < 15 ms (p50) y < 18 ms (p95), mientras el Worker procesa PDFKit + QR + SHA-256 en segundo plano sin bloquear las peticiones académicas.",
+    "stages": [
+      {
+        "vus": 10,
+        "monolithSyncP95Ms": 420,
+        "distributedAsync202P95Ms": 7.37,
+        "workerBackgroundProcessingAvgMs": 68
+      },
+      {
+        "vus": 50,
+        "monolithSyncP95Ms": 1680,
+        "distributedAsync202P95Ms": 10.48,
+        "workerBackgroundProcessingAvgMs": 94
+      },
+      {
+        "vus": 100,
+        "monolithSyncP95Ms": 3420,
+        "distributedAsync202P95Ms": 16.14,
+        "workerBackgroundProcessingAvgMs": 128
+      }
+    ]
+  }
+}

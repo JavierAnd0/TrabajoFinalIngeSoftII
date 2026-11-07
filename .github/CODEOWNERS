@@ -1,0 +1,30 @@
+# ============================================================================
+# CODEOWNERS — EduDistribuida / USCO-Net (Ingeniería de Software II)
+# ============================================================================
+# Define los responsables de revisión obligatoria de código y arquitectura
+# para cada paquete del monorepo en Pull Requests de GitHub.
+
+# Propietarios globales del Monorepo y Arquitectura Hexagonal
+*                                       @javier
+
+# Capa de Persistencia, Esquema Prisma y Semillas Deterministas
+/packages/database/                     @javier
+
+# Microservicio 1: Core Academic Service (:4001 - Reglas de Negocio y JWT/RBAC)
+/apps/core-academic-service/            @javier
+
+# Microservicio 2: Async Worker Service (:4002 - BullMQ, PDFKit, QR y SHA-256)
+/apps/async-worker-service/             @javier
+
+# Microservicio 3: Chatbot AI Service (:4003 - Gemini/Groq + Motor Determinista)
+/apps/chatbot-ai-service/               @javier
+
+# Frontend: Portal Web Astro SSR + React Islands (:4321 - Identidad USCO WCAG AA)
+/apps/web-astro/                        @javier
+
+# Suites de Auditoría de Calidad (k6, OWASP, Usabilidad WCAG, Playwright E2E)
+/qa-audits/                             @javier
+
+# Pipelines CI/CD y Gobernanza del Repositorio
+/.github/                               @javier
+/docker-compose.yml                     @javier

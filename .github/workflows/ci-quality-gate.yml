@@ -1,0 +1,163 @@
+name: "EduDistribuida USCO-Net — CI/CD Quality Gate (Hexagonal, OWASP, WCAG & E2E)"
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "release/**"
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: test
+  SUPABASE_JWT_SECRET: "ci-github-actions-jwt-secret-key-min-32-chars-usco-net-2026"
+  AI_PROVIDER: "deterministic"
+
+jobs:
+  # ============================================================================
+  # JOB 1: AUDITORÍA DE ARQUITECTURA HEXAGONAL, HIGIENE GIT Y TIPADO TYPESCRIPT
+  # ============================================================================
+  build-and-hexagonal-audit:
+    name: "1. Build Monorepo, Prisma & Pureza Hexagonal"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout del Repositorio Monorepo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS con Caché de NPM Workspaces
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Verificar Higiene de Secretos (.env no rastreado en Git)
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1 || git ls-files --error-unmatch packages/database/.env >/dev/null 2>&1; then
+            echo "❌ ERROR CRÍTICO DE SEGURIDAD: Archivo .env detectado en el índice de Git."
+            exit 1
+          fi
+          echo "✅ Higiene de Secretos Verificada: Ningún archivo .env está en el control de versiones."
+
+      - name: Verificar Pureza de Capa de Dominio (Arquitectura Hexagonal)
+        run: |
+          echo "🔍 Escaneando capas src/domain/ contra acoplamiento de infraestructura (express, @prisma/client, bullmq, supabase)..."
+          FORBIDDEN_IMPORTS=$(grep -rnE "from ['\"](express|@prisma/client|bullmq|@supabase)" apps/*/src/domain/ || true)
+          if [ -n "$FORBIDDEN_IMPORTS" ]; then
+            echo "❌ VIOLACIÓN DE ARQUITECTURA HEXAGONAL EN CAPA DE DOMINIO:"
+            echo "$FORBIDDEN_IMPORTS"
+            exit 1
+          fi
+          echo "✅ Pureza Hexagonal 100% Verificada en los 3 microservicios."
+
+      - name: Instalar Dependencias del Monorepo (Clean Install)
+        run: npm ci
+
+      - name: Generar Cliente Tipado de Prisma ORM (@edudistribuida/database)
+        run: npm run db:generate
+
+      - name: Compilar los 5 Paquetes del Monorepo (TypeScript Strict + Astro SSR)
+        run: npm run build:all
+
+  # ============================================================================
+  # JOB 2: AUDITORÍA DE SEGURIDAD DEFENSIVA OWASP TOP 10 (A01 - A10)
+  # ============================================================================
+  security-owasp-gate:
+    name: "2. Auditoría de Seguridad OWASP Top 10"
+    runs-on: ubuntu-latest
+    needs: build-and-hexagonal-audit
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar Dependencias y Compilar Artefactos
+        run: |
+          npm ci
+          npm run db:generate
+          npm run build:all
+
+      - name: Ejecutar Suite Automatizada OWASP Top 10 (A01-A10)
+        run: npm run test:security
+
+  # ============================================================================
+  # JOB 3: AUDITORÍA DE USABILIDAD HEURÍSTICA (NIELSEN) Y ACCESIBILIDAD WCAG 2.1 AA
+  # ============================================================================
+  usability-wcag-gate:
+    name: "3. Auditoría de Usabilidad Nielsen & WCAG 2.1 AA"
+    runs-on: ubuntu-latest
+    needs: build-and-hexagonal-audit
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Ejecutar Auditoría Heurística de Usabilidad y Contraste W3C WCAG 2.1 AA
+        run: node qa-audits/usability-heuristics/run-usability-audit.mjs
+
+  # ============================================================================
+  # JOB 4: SUITE DE ACEPTACIÓN END-TO-END (E2E-01 A E2E-05)
+  # ============================================================================
+  e2e-acceptance-gate:
+    name: "4. Suite de Aceptación End-to-End (E2E-01 a E2E-05)"
+    runs-on: ubuntu-latest
+    needs:
+      - security-owasp-gate
+      - usability-wcag-gate
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar Dependencias y Compilar Monorepo Completo
+        run: |
+          npm ci
+          npm run db:generate
+          npm run build:all
+
+      - name: Ejecutar Verificación Integral de Flujos E2E (E2E-01 a E2E-05)
+        run: node qa-audits/e2e-playwright/verify-e2e-flows.mjs
+
+      - name: Publicar Reportes de Auditoría QA como Artefactos de CI
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-audit-reports
+          path: |
+            qa-audits/security-owasp/owasp-audit-report.json
+            qa-audits/usability-heuristics/usability-report.json
+            qa-audits/e2e-playwright/e2e-verification-report.json
+          retention-days: 30

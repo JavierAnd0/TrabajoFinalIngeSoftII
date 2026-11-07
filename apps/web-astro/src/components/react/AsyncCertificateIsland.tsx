@@ -171,8 +171,12 @@ export default function AsyncCertificateIsland({
           }
         }
       }, 800);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'No fue posible encolar el certificado en BullMQ.');
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'No fue posible encolar el certificado en BullMQ.';
+      setErrorMsg(msg);
       setRequesting(false);
     }
   };

@@ -139,13 +139,15 @@ export default function ChatbotWidget({
       ) {
         triggerAcademicSync();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'No se pudo contactar con el microservicio Chatbot IA en el puerto 4003.';
       const fallbackMsg: ChatMessageItem = {
         id: `err-${Date.now()}`,
         sender: 'bot',
-        text:
-          err?.message ||
-          'No se pudo contactar con el microservicio Chatbot IA en el puerto 4003.',
+        text: msg,
         timestamp: new Date().toLocaleTimeString('es-CO', {
           hour: '2-digit',
           minute: '2-digit',
@@ -195,7 +197,7 @@ export default function ChatbotWidget({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/70">
-              {gradesList.map((row: any, i: number) => {
+              {gradesList.map((row, i: number) => {
                 const c1 = row.cut1 ?? row.grade?.cut1 ?? null;
                 const c2 = row.cut2 ?? row.grade?.cut2 ?? null;
                 const c3 = row.cut3 ?? row.grade?.cut3 ?? null;

@@ -648,6 +648,37 @@ export async function fetchWorkerQueueMetrics(): Promise<WorkerQueueMetrics> {
   };
 }
 
+export interface ChatbotAttachmentGradeRow {
+  courseCode?: string;
+  code?: string;
+  courseName?: string;
+  name?: string;
+  cut1?: number | null;
+  cut2?: number | null;
+  cut3?: number | null;
+  finalGrade?: number | null;
+  grade?: {
+    cut1?: number | null;
+    cut2?: number | null;
+    cut3?: number | null;
+    finalGrade?: number | null;
+  };
+}
+
+export interface ChatbotDataAttachmentPayload {
+  type?: 'GRADES_TABLE' | 'CERTIFICATE_CARD' | 'SCHEDULE_INFO' | string;
+  pga?: number;
+  enrollments?: ChatbotAttachmentGradeRow[];
+  courses?: ChatbotAttachmentGradeRow[];
+  grades?: ChatbotAttachmentGradeRow[];
+  jobId?: string;
+  id?: string;
+  verificationCode?: string;
+  pdfUrl?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
 export interface ChatbotResponsePayload {
   sessionId: string;
   reply: string;
@@ -656,10 +687,7 @@ export interface ChatbotResponsePayload {
   toolCalled: string | null;
   latencyMs: number;
   suggestedQuickReplies: string[];
-  dataAttachment: {
-    type?: 'GRADES_TABLE' | 'CERTIFICATE_CARD' | 'SCHEDULE_INFO' | string;
-    [key: string]: any;
-  } | null;
+  dataAttachment: ChatbotDataAttachmentPayload | null;
 }
 
 export async function sendChatbotMessage(params: {

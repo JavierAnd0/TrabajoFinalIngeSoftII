@@ -1,0 +1,217 @@
+name: edudistribuida-usco-cluster
+
+services:
+  # ============================================================================
+  # 1. NODO DE PERSISTENCIA RELACIONAL + POLÍTICAS RLS (PostgreSQL 15 / Supabase)
+  # ============================================================================
+  supabase-db:
+    image: postgres:15-alpine
+    container_name: edudistribuida-supabase-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-edudistribuida}
+    ports:
+      - "5432:5432"
+    volumes:
+      - supabase_pgdata:/var/lib/postgresql/data
+      - ./packages/database/sql/init_supabase_rls.sql:/docker-entrypoint-initdb.d/01-init-supabase-rls.sql:ro
+    networks:
+      - edudistribuida-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-edudistribuida}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # ============================================================================
+  # 2. BROKER DE MENSAJERÍA ASÍNCRONA DISTRIBUIDA (Redis 7 + BullMQ AOF)
+  # ============================================================================
+  redis-broker:
+    image: redis:7-alpine
+    container_name: edudistribuida-redis-broker
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_aof_data:/data
+    networks:
+      - edudistribuida-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+
+  # ============================================================================
+  # 3. MICROSERVICIO CORE ACADÉMICO TRANSACCIONAL (Arquitectura Hexagonal :4001)
+  # ============================================================================
+  core-academic-service:
+    build:
+      context: .
+      dockerfile: apps/core-academic-service/Dockerfile
+    container_name: edudistribuida-core-academic
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      redis-broker:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      CORE_SERVICE_PORT: 4001
+      DATABASE_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
+      SUPABASE_URL: ${SUPABASE_URL:-http://supabase-db:5432}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      REDIS_HOST: redis-broker
+      REDIS_PORT: 6379
+      WORKER_SERVICE_URL: http://async-worker-service:4002
+    ports:
+      - "4001:4001"
+    volumes:
+      - certificates_pdf_storage:/app/apps/async-worker-service/public/certificates
+    networks:
+      - edudistribuida-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  # ============================================================================
+  # 4. MICROSERVICIO WORKER ASÍNCRONO BULLMQ + PDFKIT CRIPTOGRÁFICO (:4002)
+  # ============================================================================
+  async-worker-service:
+    build:
+      context: .
+      dockerfile: apps/async-worker-service/Dockerfile
+    container_name: edudistribuida-async-worker
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      redis-broker:
+        condition: service_healthy
+      core-academic-service:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      WORKER_SERVICE_PORT: 4002
+      DATABASE_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
+      REDIS_HOST: redis-broker
+      REDIS_PORT: 6379
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      SUPABASE_STORAGE_BUCKET: academic-certificates
+    ports:
+      - "4002:4002"
+    volumes:
+      - certificates_pdf_storage:/app/apps/async-worker-service/public/certificates
+    networks:
+      - edudistribuida-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4002/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ============================================================================
+  # 5. MICROSERVICIO CHATBOT ACADÉMICO IA HÍBRIDO (:4003)
+  # ============================================================================
+  chatbot-ai-service:
+    build:
+      context: .
+      dockerfile: apps/chatbot-ai-service/Dockerfile
+    container_name: edudistribuida-chatbot-ai
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      core-academic-service:
+        condition: service_healthy
+      async-worker-service:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      CHATBOT_SERVICE_PORT: 4003
+      DATABASE_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
+      CORE_SERVICE_URL: http://core-academic-service:4001
+      WORKER_SERVICE_URL: http://async-worker-service:4002
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+    ports:
+      - "4003:4003"
+    networks:
+      - edudistribuida-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4003/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ============================================================================
+  # 6. PORTAL WEB INSTITUCIONAL ASTRO 5 SSR + REACT 18 ISLANDS (:4321)
+  # ============================================================================
+  web-astro:
+    build:
+      context: .
+      dockerfile: apps/web-astro/Dockerfile
+      args:
+        PUBLIC_CORE_API_URL: http://localhost:4001/api/v1
+        PUBLIC_WORKER_API_URL: http://localhost:4002
+        PUBLIC_CHATBOT_API_URL: http://localhost:4003/api/v1/chat
+    container_name: edudistribuida-web-astro
+    restart: unless-stopped
+    depends_on:
+      core-academic-service:
+        condition: service_healthy
+      async-worker-service:
+        condition: service_healthy
+      chatbot-ai-service:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4321
+      PUBLIC_ASTRO_PORT: 4321
+      PUBLIC_CORE_API_URL: http://localhost:4001/api/v1
+      PUBLIC_WORKER_API_URL: http://localhost:4002
+      PUBLIC_CHATBOT_API_URL: http://localhost:4003/api/v1/chat
+      CORE_SERVICE_URL: http://core-academic-service:4001
+      WORKER_SERVICE_URL: http://async-worker-service:4002
+      CHATBOT_SERVICE_URL: http://chatbot-ai-service:4003
+    ports:
+      - "4321:4321"
+    networks:
+      - edudistribuida-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4321/login || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+networks:
+  edudistribuida-net:
+    name: edudistribuida-net
+    driver: bridge
+
+volumes:
+  supabase_pgdata:
+    name: edudistribuida_supabase_pgdata
+  redis_aof_data:
+    name: edudistribuida_redis_aof_data
+  certificates_pdf_storage:
+    name: edudistribuida_certificates_pdf_storage

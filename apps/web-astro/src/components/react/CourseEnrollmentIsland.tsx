@@ -86,10 +86,14 @@ export default function CourseEnrollmentIsland({
         text: `${res.message} (${section.courseCode} — ${section.courseName})`,
       });
       triggerAcademicSync();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Error al procesar la inscripción en la sección seleccionada.';
       setFeedback({
         type: 'error',
-        text: err?.message || 'Error al procesar la inscripción en la sección seleccionada.',
+        text: msg,
       });
     } finally {
       setEnrollingId(null);

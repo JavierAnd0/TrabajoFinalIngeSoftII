@@ -80,7 +80,7 @@ app.get('/api/v1/health', healthHandler);
 app.get('/api/docs.json', (_req: Request, res: Response) => {
   res.status(200).json(openApiSpec);
 });
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+app.use('/api/docs', ...(swaggerUi.serve as unknown as express.RequestHandler[]), swaggerUi.setup(openApiSpec) as unknown as express.RequestHandler);
 
 // 5. Rutas Conversacionales API v1
 app.use('/api/v1/chat', createChatRouter(processAcademicChatUseCase));

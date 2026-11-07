@@ -176,8 +176,12 @@ export default function LoginIsland() {
           : '/dashboard/estudiante';
 
       window.location.assign(targetUrl);
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Error al autenticar con el servidor Core Academic (Puerto 4001).');
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Error al autenticar con el servidor Core Academic (Puerto 4001).';
+      setErrorMessage(msg);
     } finally {
       setLoading(false);
     }

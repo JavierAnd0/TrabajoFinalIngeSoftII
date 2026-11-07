@@ -1,0 +1,28 @@
+# Dependencias locales (se instalan limpias dentro del contenedor multi-stage)
+node_modules/
+**/node_modules/
+.npm/
+
+# Artefactos de compilación local
+dist/
+**/dist/
+.astro/
+**/.astro/
+
+# Variables de entorno privadas locales
+.env
+.env.local
+.env.*.local
+
+# Control de versiones y metadatos del sistema operativo
+.git/
+.gitignore
+.DS_Store
+Thumbs.db
+
+# Reportes temporales de pruebas y logs
+playwright-report/
+test-results/
+coverage/
+*.log
+npm-debug.log*

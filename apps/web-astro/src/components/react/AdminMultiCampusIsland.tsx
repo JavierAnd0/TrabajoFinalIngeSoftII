@@ -134,10 +134,14 @@ export default function AdminMultiCampusIsland({
         type: 'success',
         text: `Calificación guardada para ${row.studentName} en ${row.courseCode} (${row.campusCode}). Definitiva recalculada: ${row.finalGrade.toFixed(2)}`,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Error al actualizar calificación en el servicio Core Academic.';
       setFeedback({
         type: 'error',
-        text: err?.message || 'Error al actualizar calificación en el servicio Core Academic.',
+        text: msg,
       });
     } finally {
       setSavingId(null);

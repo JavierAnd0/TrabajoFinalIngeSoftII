@@ -12,9 +12,11 @@ export interface SessionUser {
   documentNumber: string;
 }
 
-declare namespace App {
-  interface Locals {
-    user: SessionUser | null;
-    token: string | null;
+declare global {
+  namespace App {
+    interface Locals {
+      user: SessionUser | null;
+      token: string | null;
+    }
   }
 }

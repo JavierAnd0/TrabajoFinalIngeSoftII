@@ -1,0 +1,64 @@
+# ============================================================================
+# EduDistribuida / USCO-Net — Monorepo .gitignore
+# ============================================================================
+
+# Dependencias Node.js / NPM Workspaces
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+.npm/
+
+# Artefactos de Compilación (TypeScript, Astro SSR, Vite)
+dist/
+**/dist/
+build/
+**/build/
+.astro/
+**/.astro/
+*.tsbuildinfo
+
+# Variables de Entorno y Secretos (NUNCA subir .env real a GitHub)
+.env
+**/.env
+.env.*
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Base de Datos Local y Almacenamiento Temporal
+.pgdata/
+postgres-data/
+redis-data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificados PDF generados dinámicamente en pruebas (excepto carpeta base)
+apps/async-worker-service/public/certificates/*.pdf
+
+# Reportes Temporales de Playwright / k6 / Logs
+playwright-report/
+**/playwright-report/
+test-results/
+**/test-results/
+coverage/
+**/coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sistema Operativo e IDEs (macOS, Windows, Linux, VSCode, JetBrains)
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
