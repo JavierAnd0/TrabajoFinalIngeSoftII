@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================================
+// ENUMS DEL DOMINIO ACADÉMICO DISTRIBUIDO
+// ============================================================================
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+}
+
+enum CertificateType {
+  STUDY
+  GRADES
+  GOOD_STANDING
+}
+
+enum CertificateJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ChatEngine {
+  GEMINI_AI
+  GROQ_AI
+  DETERMINISTIC_RULES
+}
+
+// ============================================================================
+// 1. SEDES UNIVERSITARIAS (Particionamiento Lógico Multi-Sede USCO)
+// ============================================================================
+
+model Campus {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  city      String
+  address   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users    User[]
+  programs AcademicProgram[]
+  sections CourseSection[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+// ============================================================================
+// 2. USUARIOS (Estudiantes, Docentes y Administradores vinculados a Supabase)
+// ============================================================================
+
+model User {
+  id             String   @id @default(uuid())
+  supabaseUid    String?  @unique
+  email          String   @unique
+  passwordHash   String
+  fullName       String
+  documentNumber String   @unique
+  studentCode    String?  @unique
+  role           Role     @default(STUDENT)
+  campusId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  campus          Campus               @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  taughtSections  CourseSection[]      @relation("TeacherSections")
+  enrollments     Enrollment[]         @relation("StudentEnrollments")
+  certificateJobs CertificateJob[]     @relation("StudentCertificateJobs")
+  chatLogs        ChatInteractionLog[] @relation("StudentChatLogs")
+
+  @@index([campusId, role])
+  @@index([email])
+  @@index([studentCode])
+}
+
+// ============================================================================
+// 3. PROGRAMAS ACADÉMICOS POR SEDE
+// ============================================================================
+
+model AcademicProgram {
+  id           String @id @default(uuid())
+  code         String @unique
+  name         String
+  faculty      String
+  totalCredits Int    @default(165)
+  campusId     String
+
+  campus  Campus   @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  courses Course[]
+
+  @@index([campusId])
+}
+
+// ============================================================================
+// 4. PERIODOS ACADÉMICOS (Ventanas de Matrícula ej. 2026-2)
+// ============================================================================
+
+model AcademicPeriod {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  isActive        Boolean  @default(true)
+  enrollmentStart DateTime
+  enrollmentEnd   DateTime
+
+  sections    CourseSection[]
+  enrollments Enrollment[]
+
+  @@index([code, isActive])
+}
+
+// ============================================================================
+// 5. ASIGNATURAS DEL PLAN DE ESTUDIOS
+// ============================================================================
+
+model Course {
+  id            String @id @default(uuid())
+  code          String @unique
+  name          String
+  credits       Int
+  semesterLevel Int
+  programId     String
+
+  program  AcademicProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  sections CourseSection[]
+
+  @@index([programId, semesterLevel])
+  @@index([code])
+}
+
+// ============================================================================
+// 6. GRUPOS / SECCIONES ABIERTAS (Control de Cupos por Sede y Periodo)
+// ============================================================================
+
+model CourseSection {
+  id            String @id @default(uuid())
+  groupNumber   String
+  scheduleText  String
+  classroom     String
+  maxQuota      Int    @default(30)
+  occupiedQuota Int    @default(0)
+  courseId      String
+  teacherId     String
+  periodId      String
+  campusId      String
+
+  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teacher     User           @relation("TeacherSections", fields: [teacherId], references: [id], onDelete: Restrict)
+  period      AcademicPeriod @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  campus      Campus         @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  enrollments Enrollment[]
+
+  @@unique([courseId, periodId, campusId, groupNumber])
+  @@index([campusId, periodId])
+  @@index([teacherId, periodId])
+}
+
+// ============================================================================
+// 7. MATRÍCULAS ESTUDIANTILES (Transaccional Síncrono)
+// ============================================================================
+
+model Enrollment {
+  id               String           @id @default(uuid())
+  studentId        String
+  sectionId        String
+  periodId         String
+  status           EnrollmentStatus @default(ACTIVE)
+  paymentReference String
+  paymentStatus    PaymentStatus    @default(PAID)
+  enrolledAt       DateTime         @default(now())
+
+  student User           @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+  section CourseSection  @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  period  AcademicPeriod @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  grade   Grade?
+
+  @@unique([studentId, sectionId])
+  @@index([studentId, periodId, status])
+  @@index([sectionId, status])
+}
+
+// ============================================================================
+// 8. CALIFICACIONES POR CORTE (Corte 1: 30%, Corte 2: 30%, Corte 3: 40%)
+// ============================================================================
+
+model Grade {
+  id           String   @id @default(uuid())
+  enrollmentId String   @unique
+  cut1         Float?
+  cut2         Float?
+  cut3         Float?
+  finalGrade   Float?
+  passed       Boolean?
+  observations String?
+  updatedAt    DateTime @updatedAt
+  updatedBy    String?
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([passed])
+}
+
+// ============================================================================
+// 9. TRABAJOS ASÍNCRONOS DE CERTIFICADOS PDF (Cola Redis / BullMQ)
+// ============================================================================
+
+model CertificateJob {
+  id                   String               @id @default(uuid())
+  studentId            String
+  certificateType      CertificateType
+  status               CertificateJobStatus @default(QUEUED)
+  verificationCode     String               @unique
+  digitalSignatureHash String?
+  pdfUrl               String?
+  requestedAt          DateTime             @default(now())
+  completedAt          DateTime?
+
+  student User @relation("StudentCertificateJobs", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@index([verificationCode])
+}
+
+// ============================================================================
+// 10. AUDITORÍA DE INTERACCIONES DEL CHATBOT HÍBRIDO IA
+// ============================================================================
+
+model ChatInteractionLog {
+  id             String     @id @default(uuid())
+  studentId      String?
+  sessionId      String
+  userPrompt     String
+  botResponse    String
+  engineUsed     ChatEngine @default(DETERMINISTIC_RULES)
+  intentDetected String
+  toolCalled     String?
+  latencyMs      Int
+  createdAt      DateTime   @default(now())
+
+  student User? @relation("StudentChatLogs", fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, createdAt])
+  @@index([sessionId])
+  @@index([engineUsed])
+}
