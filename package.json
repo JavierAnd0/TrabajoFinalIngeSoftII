@@ -1,0 +1,29 @@
+{
+  "name": "edudistribuida-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plataforma Distribuida de Gestión Académica Descentralizada - Arquitectura Hexagonal, Astro SSR, Supabase, BullMQ e IA",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "db:generate": "npm run generate --workspace=@edudistribuida/database",
+    "db:push": "npm run db:push --workspace=@edudistribuida/database",
+    "db:seed": "npm run db:seed --workspace=@edudistribuida/database",
+    "dev:core": "npm run dev --workspace=@edudistribuida/core-academic-service",
+    "dev:worker": "npm run dev --workspace=@edudistribuida/async-worker-service",
+    "dev:chatbot": "npm run dev --workspace=@edudistribuida/chatbot-ai-service",
+    "dev:web": "npm run dev --workspace=@edudistribuida/web-astro",
+    "build:all": "npm run build --workspaces --if-present",
+    "test:security": "node qa-audits/security-owasp/run-owasp-audit.mjs",
+    "test:k6": "k6 run qa-audits/performance-k6/load-test-distributed.js",
+    "test:e2e": "npx playwright test --config=qa-audits/e2e-playwright/playwright.config.ts",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down -v"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "typescript": "^5.6.3"
+  }
+}
