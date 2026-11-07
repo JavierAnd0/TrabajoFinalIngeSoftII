@@ -1,0 +1,207 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import ChatbotWidget from '../components/react/ChatbotWidget';
+import type { SessionUser } from '../env';
+
+interface Props {
+  title: string;
+  description?: string;
+  user?: SessionUser | null;
+  hideChatbot?: boolean;
+}
+
+const {
+  title,
+  description = 'Plataforma Distribuida de Gestión Académica Descentralizada — Universidad Surcolombiana (EduDistribuida / USCO-Net)',
+  user = Astro.locals.user,
+  hideChatbot = false,
+} = Astro.props;
+
+const activeCampusBadge = user?.campusName
+  ? `${user.campusName} (${user.campusCode})`
+  : 'Multi-Sede (Neiva · Pitalito · Garzón · La Plata)';
+
+const activeStudentId =
+  user?.role === 'STUDENT' && user?.id
+    ? user.id
+    : '44444444-4444-4444-8444-444444444403';
+---
+
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#8B1E24" />
+    <title>{title} | EduDistribuida USCO-Net</title>
+    <ClientRouter />
+  </head>
+  <body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+    <!-- Enlace de salto accesible WCAG AA -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-xl focus:bg-usco-gold focus:text-slate-950 focus:font-bold"
+    >
+      Saltar al contenido principal
+    </a>
+
+    <!-- Barra Superior Institucional Universidad Surcolombiana -->
+    <header
+      role="banner"
+      aria-label="Cabecera Institucional Universidad Surcolombiana"
+      class="sticky top-0 z-40 border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-md"
+    >
+      <div class="usco-gradient h-1.5 w-full"></div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <!-- Identidad Institucional -->
+        <div class="flex items-center gap-3 min-w-0">
+          <a
+            href={user ? (user.role === 'STUDENT' ? '/dashboard/estudiante' : '/dashboard/admin') : '/login'}
+            class="flex items-center gap-3 group"
+            aria-label="Inicio EduDistribuida Universidad Surcolombiana"
+          >
+            <div class="w-10 h-10 rounded-xl bg-usco-wine border border-usco-gold/50 flex items-center justify-center font-mono font-extrabold text-usco-gold text-sm shadow-md group-hover:scale-105 transition-transform">
+              USCO
+            </div>
+            <div class="truncate">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm sm:text-base tracking-tight">
+                  EduDistribuida · USCO-Net
+                </span>
+                <span class="hidden md:inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-usco-wine/40 text-usco-gold border border-usco-gold/30">
+                  PERIODO 2026-2
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400 truncate">
+                Universidad Surcolombiana · Ingeniería de Software II
+              </p>
+            </div>
+          </a>
+        </div>
+
+        <!-- Indicador de Sede Activa, Enlaces de Navegación y Swagger -->
+        <nav
+          aria-label="Navegación Principal del Sistema"
+          class="flex items-center gap-2 sm:gap-3"
+        >
+          <!-- Indicador de Sede Activa -->
+          <div
+            data-testid="active-campus-indicator"
+            class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs"
+          >
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-slate-400">Sede:</span>
+            <span class="font-semibold text-usco-gold">{activeCampusBadge}</span>
+          </div>
+
+          {user && (
+            <>
+              <a
+                href="/dashboard/estudiante"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-colors"
+              >
+                Portal Estudiante
+              </a>
+              <a
+                href="/dashboard/admin"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-colors"
+              >
+                Multi-Sede / Docente
+              </a>
+            </>
+          )}
+
+          <!-- Enlace Rápido a Swagger OpenAPI -->
+          <a
+            href="http://localhost:4001/api/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="swagger-docs-link"
+            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-usco-gold border border-usco-gold/30 text-xs font-mono font-semibold transition-all"
+          >
+            <span>Swagger OpenAPI</span>
+          </a>
+
+          {user ? (
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <div class="hidden md:block text-right">
+                <p class="text-xs font-semibold text-white leading-tight truncate max-w-[160px]">
+                  {user.fullName}
+                </p>
+                <p class="text-[10px] font-mono text-usco-gold">
+                  {user.role} · {user.campusCode}
+                </p>
+              </div>
+              <a
+                href="/api/auth/logout"
+                id="logout-btn"
+                data-testid="logout-btn"
+                class="px-3 py-1.5 rounded-xl bg-red-950/70 hover:bg-red-900/80 text-red-200 border border-red-800/70 text-xs font-semibold transition-all"
+              >
+                Salir
+              </a>
+            </div>
+          ) : (
+            <a
+              href="/login"
+              class="px-3.5 py-1.5 rounded-xl bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/40 text-xs font-semibold transition-all"
+            >
+              Iniciar Sesión
+            </a>
+          )}
+        </nav>
+      </div>
+    </header>
+
+    <!-- Contenido Principal Accesible -->
+    <main
+      id="main-content"
+      role="main"
+      class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8"
+    >
+      <slot />
+    </main>
+
+    <!-- Pie de Página Institucional -->
+    <footer
+      role="contentinfo"
+      class="border-t border-slate-900 bg-slate-950/90 py-5 text-xs text-slate-400"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>
+          <strong class="text-slate-200">Universidad Surcolombiana (USCO)</strong> · Sedes Neiva, Pitalito, Garzón y La Plata · Vigilada Mineducación
+        </p>
+        <p class="font-mono text-[11px] text-slate-400">
+          Arquitectura Hexagonal · Astro 5 SSR (:4321) · Core (:4001) · BullMQ (:4002) · Chatbot IA (:4003)
+        </p>
+      </div>
+    </footer>
+
+    <!-- Widget Conversacional Flotante Persistente con ClientRouter -->
+    {!hideChatbot && (
+      <div transition:persist="chatbot-widget">
+        <ChatbotWidget
+          client:load
+          defaultStudentId={activeStudentId}
+          studentName={user?.fullName || 'Álvaro Javier Andrade'}
+        />
+      </div>
+    )}
+
+    <script is:inline>
+      document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target.closest('#logout-btn') : null;
+        if (target) {
+          try {
+            window.localStorage.removeItem('edudistribuida_token');
+            window.localStorage.removeItem('edudistribuida_user');
+            document.cookie = 'edudistribuida_token=; Path=/; Max-Age=0; SameSite=Lax';
+            document.cookie = 'edudistribuida_user=; Path=/; Max-Age=0; SameSite=Lax';
+          } catch {}
+        }
+      });
+    </script>
+  </body>
+</html>

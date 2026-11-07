@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --usco-wine: #8B1E24;
+    --usco-gold: #D4AF37;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased selection:bg-usco-wine selection:text-white;
+  }
+
+  /* Focus visible accesible para cumplimiento WCAG AA */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-usco-gold;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-slate-900/85 backdrop-blur-md border border-slate-800/80 shadow-xl;
+  }
+  .usco-gradient {
+    background: linear-gradient(135deg, #8B1E24 0%, #5c1116 60%, #1e1b4b 100%);
+  }
+}

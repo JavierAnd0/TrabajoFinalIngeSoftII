@@ -1,0 +1,227 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import GradesTableIsland from '../../components/react/GradesTableIsland';
+import CourseEnrollmentIsland from '../../components/react/CourseEnrollmentIsland';
+import AsyncCertificateIsland from '../../components/react/AsyncCertificateIsland';
+import {
+  fetchOpenSections,
+  fetchStudentSummary,
+} from '../../services/apiClient';
+import type {
+  CourseSectionItem,
+  StudentSummaryData,
+} from '../../stores/academicStore';
+
+const sessionUser = Astro.locals.user;
+const token = Astro.locals.token;
+
+const studentId =
+  sessionUser?.role === 'STUDENT' && sessionUser?.id
+    ? sessionUser.id
+    : '44444444-4444-4444-8444-444444444403';
+
+const campusId =
+  sessionUser?.campusId || '11111111-1111-4111-8111-111111111101';
+
+let initialSummary: StudentSummaryData | null = null;
+let initialSections: CourseSectionItem[] = [];
+
+try {
+  initialSummary = await fetchStudentSummary(studentId, token);
+} catch {
+  initialSummary = null;
+}
+
+try {
+  initialSections = await fetchOpenSections({ campusId, studentId, token });
+} catch {
+  initialSections = [];
+}
+
+const pgaDisplay = initialSummary ? initialSummary.metrics.pga.toFixed(2) : '4.52';
+const enrolledCreditsDisplay = initialSummary
+  ? `${initialSummary.metrics.enrolledCredits} Créditos (${initialSummary.metrics.enrolledCoursesCount} Cursos)`
+  : '13 Créditos (4 Cursos)';
+const campusDisplay = initialSummary
+  ? `${initialSummary.student.campusName.split('-')[0].trim()} - ${initialSummary.student.campusCode}`
+  : 'Neiva - NEI';
+const financialDisplay = initialSummary?.metrics.financialStatus || 'MATRÍCULA PAGADA';
+const studentFullName =
+  initialSummary?.student.fullName || sessionUser?.fullName || 'Álvaro Javier Andrade';
+const studentCode =
+  initialSummary?.student.studentCode || sessionUser?.studentCode || '20221203806';
+---
+
+<MainLayout
+  title="Dashboard del Estudiante · Ingeniería de Software"
+  user={sessionUser}
+>
+  <div class="space-y-8">
+    <!-- Encabezado de Perfil Estudiantil -->
+    <section
+      aria-label="Resumen de Perfil Académico del Estudiante"
+      class="usco-gradient rounded-2xl p-6 sm:p-7 border border-usco-gold/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+    >
+      <div>
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-950/80 text-usco-gold border border-usco-gold/40">
+            CÓDIGO ESTUDIANTIL: {studentCode}
+          </span>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-emerald-950/90 text-emerald-300 border border-emerald-700/60">
+            PERIODO ACTIVO 2026-2
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          {studentFullName}
+        </h1>
+        <p class="text-sm text-slate-200 mt-1">
+          Programa de Ingeniería de Software · Facultad de Ingeniería · Universidad Surcolombiana
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 self-start md:self-center">
+        <div class="px-4 py-2.5 rounded-xl bg-slate-950/80 border border-usco-gold/40 text-right">
+          <p class="text-[11px] uppercase tracking-wider text-slate-300">Nodo Regional RLS</p>
+          <p class="text-sm font-mono font-bold text-usco-gold">{campusDisplay}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tarjetas KPI Superiores -->
+    <section
+      aria-label="Indicadores Clave de Rendimiento Académico (KPIs)"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+    >
+      <!-- KPI 1: Promedio General Acumulado (PGA) -->
+      <div
+        data-testid="pga-card"
+        class="glass-card rounded-2xl p-5 border border-usco-gold/40 flex flex-col justify-between"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Promedio General (PGA)
+          </span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-usco-wine/40 text-usco-gold border border-usco-gold/30">
+            30% · 30% · 40%
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <span
+            id="kpi-pga-value"
+            class="text-3xl font-mono font-extrabold text-usco-gold"
+          >
+            {pgaDisplay}
+          </span>
+          <span class="text-xs text-slate-400 font-mono">/ 5.00</span>
+        </div>
+        <p class="text-xs text-emerald-400 mt-2 font-medium">
+          Rendimiento Académico Sobresaliente
+        </p>
+      </div>
+
+      <!-- KPI 2: Créditos Inscritos (2026-2) -->
+      <div
+        data-testid="credits-card"
+        class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Créditos Inscritos (2026-2)
+          </span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-950 text-slate-300 border border-slate-800">
+            ISW-NEI
+          </span>
+        </div>
+        <p
+          id="kpi-credits-value"
+          class="mt-3 text-xl font-mono font-bold text-white"
+        >
+          {enrolledCreditsDisplay}
+        </p>
+        <p class="text-xs text-slate-400 mt-2">
+          Tope semestral habilitado: 21 créditos
+        </p>
+      </div>
+
+      <!-- KPI 3: Sede Actual -->
+      <div
+        data-testid="campus-kpi-card"
+        class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Sede Actual
+          </span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60">
+            ACTIVA
+          </span>
+        </div>
+        <p class="mt-3 text-xl font-bold text-white">
+          {campusDisplay}
+        </p>
+        <p class="text-xs text-slate-400 mt-2">
+          Avenida Pastrana Borrero · Huila
+        </p>
+      </div>
+
+      <!-- KPI 4: Estado Financiero -->
+      <div
+        data-testid="financial-status-card"
+        class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Estado Financiero
+          </span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60">
+            VERIFICADO
+          </span>
+        </div>
+        <p class="mt-3 text-lg font-mono font-extrabold text-emerald-400">
+          {financialDisplay}
+        </p>
+        <p class="text-xs text-slate-400 mt-2">
+          Paz y Salvo Financiero y Biblioteca OK
+        </p>
+      </div>
+    </section>
+
+    <!-- Isla 1: Tabla de Calificaciones + Simulador Interactivo "¿Cuánto necesito en el Corte 3?" -->
+    <section aria-label="Calificaciones Ponderadas y Simulador de Corte 3">
+      <GradesTableIsland
+        client:load
+        studentId={studentId}
+        token={token}
+        initialSummary={initialSummary}
+      />
+    </section>
+
+    <!-- Grilla Inferior: Inscripción de Cursos en 1 Clic + Emisión Asíncrona de Certificados PDF -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <section
+        aria-label="Inscripción de Asignaturas en 1 Clic"
+        class="lg:col-span-7"
+      >
+        <CourseEnrollmentIsland
+          client:load
+          studentId={studentId}
+          campusId={campusId}
+          token={token}
+          initialSections={initialSections}
+        />
+      </section>
+
+      <section
+        aria-label="Generación Asíncrona de Certificados Académicos en PDF"
+        class="lg:col-span-5"
+      >
+        <AsyncCertificateIsland
+          client:load
+          studentId={studentId}
+          token={token}
+          initialCertificates={initialSummary?.certificates || []}
+        />
+      </section>
+    </div>
+  </div>
+</MainLayout>

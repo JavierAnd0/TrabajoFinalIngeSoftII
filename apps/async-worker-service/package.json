@@ -1,0 +1,32 @@
+{
+  "name": "@edudistribuida/async-worker-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Microservicio Worker Asíncrono de Procesamiento de Certificados PDF Criptográficos con QR y Notificaciones (BullMQ + PDFKit)",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@edudistribuida/database": "*",
+    "bullmq": "5.12.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.1",
+    "pdfkit": "^0.15.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.9.0",
+    "@types/pdfkit": "^0.13.5",
+    "@types/qrcode": "^1.5.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

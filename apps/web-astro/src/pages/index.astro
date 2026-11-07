@@ -1,0 +1,13 @@
+---
+const user = Astro.locals.user;
+const token = Astro.locals.token;
+
+if (user || token) {
+  if (user?.role === 'TEACHER' || user?.role === 'ADMIN') {
+    return Astro.redirect('/dashboard/admin');
+  }
+  return Astro.redirect('/dashboard/estudiante');
+}
+
+return Astro.redirect('/login');
+---

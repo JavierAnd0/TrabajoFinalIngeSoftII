@@ -1,0 +1,89 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import AdminMultiCampusIsland from '../../components/react/AdminMultiCampusIsland';
+import {
+  fetchAdminEnrollments,
+  fetchCampusesStats,
+  fetchWorkerQueueMetrics,
+  type WorkerQueueMetrics,
+} from '../../services/apiClient';
+import type {
+  AdminEnrollmentRecord,
+  CampusStatItem,
+} from '../../stores/academicStore';
+
+const sessionUser = Astro.locals.user;
+const token = Astro.locals.token;
+const userRole = sessionUser?.role || 'ADMIN';
+
+let initialCampuses: CampusStatItem[] = [];
+let initialEnrollments: AdminEnrollmentRecord[] = [];
+let initialQueueMetrics: WorkerQueueMetrics | null = null;
+
+try {
+  initialCampuses = await fetchCampusesStats(token);
+} catch {
+  initialCampuses = [];
+}
+
+try {
+  initialEnrollments = await fetchAdminEnrollments(token);
+} catch {
+  initialEnrollments = [];
+}
+
+try {
+  initialQueueMetrics = await fetchWorkerQueueMetrics();
+} catch {
+  initialQueueMetrics = null;
+}
+---
+
+<MainLayout
+  title="Consola Docente y Administración Multi-Sede"
+  user={sessionUser}
+>
+  <div class="space-y-8">
+    <!-- Banner Superior de Gestión Multi-Sede -->
+    <section
+      aria-label="Cabecera de Consola Docente y Administración Multi-Sede"
+      class="usco-gradient rounded-2xl p-6 sm:p-7 border border-usco-gold/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+    >
+      <div>
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-950/80 text-usco-gold border border-usco-gold/40">
+            ROL ACTIVO: {userRole}
+          </span>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-emerald-950/90 text-emerald-300 border border-emerald-700/60">
+            4 SEDES CONECTADAS (NEI · PIT · GAR · LPL)
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          Consola Académica Multi-Sede y Telemetría BullMQ
+        </h1>
+        <p class="text-sm text-slate-200 mt-1">
+          {sessionUser?.fullName || 'Dra. María Fernanda Perdomo (Registro y Control USCO)'} · Gestión de Calificaciones Ponderadas y Nodos Regionales
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 self-start md:self-center">
+        <a
+          href="/dashboard/estudiante"
+          class="px-4 py-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 text-usco-gold border border-usco-gold/40 text-xs font-semibold transition-all"
+        >
+          Ver Vista Estudiante
+        </a>
+      </div>
+    </section>
+
+    <!-- Isla React Multi-Sede + Editor de Notas + Monitor BullMQ -->
+    <AdminMultiCampusIsland
+      client:load
+      token={token}
+      userRole={userRole}
+      initialCampuses={initialCampuses}
+      initialEnrollments={initialEnrollments}
+      initialQueueMetrics={initialQueueMetrics}
+    />
+  </div>
+</MainLayout>
