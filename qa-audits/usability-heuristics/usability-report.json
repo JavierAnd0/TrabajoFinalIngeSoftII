@@ -1,18 +1,18 @@
 {
   "project": "EduDistribuida / USCO-Net — Frontend Astro 5 SSR + React 19 Islands",
   "standard": "Jakob Nielsen 10 Usability Heuristics + W3C WCAG 2.1 Level AA",
-  "executedAt": "2026-11-07T05:00:22.230Z",
+  "executedAt": "2026-11-08T18:27:22.022Z",
   "metricsSummary": {
-    "filesAnalyzed": 17,
+    "filesAnalyzed": 19,
     "averageHeuristicScoreOutOf5": 4.98,
     "averageHeuristicCompliancePct": 99.6,
     "wcagContrastPairsAudited": 5,
     "wcagContrastPairsPassed": 5,
     "wcagStructuralCriteriaPassed": "6/6",
-    "ariaAttributesCount": 26,
-    "roleAttributesCount": 10,
+    "ariaAttributesCount": 37,
+    "roleAttributesCount": 20,
     "labelAssociationsCount": 5,
-    "dataTestIdSelectorsCount": 46,
+    "dataTestIdSelectorsCount": 53,
     "overallStatus": "PASSED_EXCELLENCE"
   },
   "wcagColorContrastAudit": [
@@ -96,12 +96,12 @@
     {
       "criterion": "WCAG 3.3.2 Labels or Instructions (Asociación explícita label/input)",
       "passed": true,
-      "detail": "5 asociaciones htmlFor explícitas y 26 atributos aria-* verificados."
+      "detail": "5 asociaciones htmlFor explícitas y 37 atributos aria-* verificados."
     },
     {
       "criterion": "WCAG 4.1.2 Name, Role, Value & Testability (Selectores data-testid)",
       "passed": true,
-      "detail": "46 selectores deterministas data-testid y 10 roles WAI-ARIA."
+      "detail": "53 selectores deterministas data-testid y 20 roles WAI-ARIA."
     }
   ],
   "nielsenHeuristicsEvaluation": [

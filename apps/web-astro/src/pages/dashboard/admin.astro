@@ -14,7 +14,21 @@ import type {
 
 const sessionUser = Astro.locals.user;
 const token = Astro.locals.token;
+
+// Redirección de seguridad adicional por si un estudiante intenta abrir /dashboard/admin
+if (sessionUser?.role === 'STUDENT') {
+  return Astro.redirect('/dashboard/estudiante');
+}
+
 const userRole = sessionUser?.role || 'ADMIN';
+const userCampusCode = sessionUser?.campusCode || 'NEI';
+const CAMPUS_FULL_NAMES: Record<string, string> = { NEI: 'Sede Central Neiva', PIT: 'Sede Pitalito', GAR: 'Sede Garzón', LPL: 'Sede La Plata' };
+const campusFullName = CAMPUS_FULL_NAMES[userCampusCode] || 'Sede Central Neiva';
+const userFullName =
+  sessionUser?.fullName ||
+  (userRole === 'TEACHER'
+    ? 'Ing. Carlos Eduardo Ramírez, M.Sc.'
+    : 'Dra. María Fernanda Perdomo (Registro y Control USCO)');
 
 let initialCampuses: CampusStatItem[] = [];
 let initialEnrollments: AdminEnrollmentRecord[] = [];
@@ -40,50 +54,60 @@ try {
 ---
 
 <MainLayout
-  title="Consola Docente y Administración Multi-Sede"
+  title={userRole === 'TEACHER' ? `Gestión Docente · ${campusFullName}` : 'Consolidado Académico Multi-Sede'}
   user={sessionUser}
 >
-  <div class="space-y-8">
-    <!-- Banner Superior de Gestión Multi-Sede -->
+  <div class="space-y-6">
+    <!-- Cabecera Institucional con Jurisdicción Estricta por Rol -->
     <section
       aria-label="Cabecera de Consola Docente y Administración Multi-Sede"
-      class="usco-gradient rounded-2xl p-6 sm:p-7 border border-usco-gold/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+      class="usco-gradient rounded-xl p-5 sm:p-6 border border-usco-gold/30 flex flex-col md:flex-row md:items-center justify-between gap-4"
     >
       <div>
         <div class="flex flex-wrap items-center gap-2 mb-2">
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-950/80 text-usco-gold border border-usco-gold/40">
-            ROL ACTIVO: {userRole}
+          <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-[#070A12]/80 text-usco-gold border border-usco-gold/30">
+            {userRole === 'TEACHER' ? 'DOCENTE DE PLANTA' : 'DIRECCIÓN DE REGISTRO Y CONTROL'}
           </span>
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-emerald-950/90 text-emerald-300 border border-emerald-700/60">
-            4 SEDES CONECTADAS (NEI · PIT · GAR · LPL)
+          <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-[#070A12]/80 text-slate-200 border border-slate-700/80">
+            {userRole === 'TEACHER'
+              ? campusFullName.toUpperCase()
+              : 'NEIVA · PITALITO · GARZÓN · LA PLATA'}
           </span>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Consola Académica Multi-Sede y Telemetría BullMQ
+        <h1 class="text-xl sm:text-3xl font-bold text-white tracking-tight">
+          {userRole === 'TEACHER'
+            ? `Planilla de notas · ${campusFullName}`
+            : 'Gestión Académica y Consolidado Multi-Sede'}
         </h1>
-        <p class="text-sm text-slate-200 mt-1">
-          {sessionUser?.fullName || 'Dra. María Fernanda Perdomo (Registro y Control USCO)'} · Gestión de Calificaciones Ponderadas y Nodos Regionales
+        <p class="text-xs sm:text-sm text-slate-200/90 mt-1">
+          {userFullName} · Periodo Académico 2026-2
         </p>
       </div>
 
       <div class="flex items-center gap-3 self-start md:self-center">
-        <a
-          href="/dashboard/estudiante"
-          class="px-4 py-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 text-usco-gold border border-usco-gold/40 text-xs font-semibold transition-all"
-        >
-          Ver Vista Estudiante
-        </a>
+        <div class="px-4 py-2.5 rounded-lg bg-[#070A12]/85 border border-slate-800 text-left md:text-right">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+            {userRole === 'TEACHER' ? 'Sede' : 'Sedes a cargo'}
+          </p>
+          <p class="text-xs sm:text-sm font-semibold text-usco-gold mt-0.5">
+            {userRole === 'TEACHER' ? campusFullName : 'Las 4 sedes regionales'}
+          </p>
+        </div>
       </div>
     </section>
 
-    <!-- Isla React Multi-Sede + Editor de Notas + Monitor BullMQ -->
-    <AdminMultiCampusIsland
-      client:load
-      token={token}
-      userRole={userRole}
-      initialCampuses={initialCampuses}
-      initialEnrollments={initialEnrollments}
-      initialQueueMetrics={initialQueueMetrics}
-    />
+    <!-- Isla React Aislada por Rol/Sede + Editor de Notas + Estado de Colas -->
+    <div class="min-w-0 max-w-full">
+      <AdminMultiCampusIsland
+        client:load
+        token={token}
+        userRole={userRole}
+        userCampusCode={userCampusCode}
+        userFullName={userFullName}
+        initialCampuses={initialCampuses}
+        initialEnrollments={initialEnrollments}
+        initialQueueMetrics={initialQueueMetrics}
+      />
+    </div>
   </div>
 </MainLayout>

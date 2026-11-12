@@ -2,6 +2,7 @@
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import ChatbotWidget from '../components/react/ChatbotWidget';
+import UserProfileMenuIsland from '../components/react/UserProfileMenuIsland';
 import type { SessionUser } from '../env';
 
 interface Props {
@@ -13,19 +14,52 @@ interface Props {
 
 const {
   title,
-  description = 'Plataforma Distribuida de Gestión Académica Descentralizada — Universidad Surcolombiana (EduDistribuida / USCO-Net)',
+  description = 'Sistema Institucional de Gestión Académica Descentralizada — Universidad Surcolombiana (USCO)',
   user = Astro.locals.user,
   hideChatbot = false,
 } = Astro.props;
 
-const activeCampusBadge = user?.campusName
-  ? `${user.campusName} (${user.campusCode})`
-  : 'Multi-Sede (Neiva · Pitalito · Garzón · La Plata)';
+const currentPath = Astro.url.pathname;
+
+const CAMPUS_FULL_NAMES: Record<string, string> = {
+  NEI: 'Sede Central Neiva',
+  PIT: 'Sede Pitalito',
+  GAR: 'Sede Garzón',
+  LPL: 'Sede La Plata',
+};
+
+const activeCampusBadge = user
+  ? user.role === 'ADMIN'
+    ? 'Todas las sedes'
+    : CAMPUS_FULL_NAMES[user.campusCode] || user.campusName?.split('-')[0]?.trim() || 'Sede Central Neiva'
+  : 'Neiva · Pitalito · Garzón · La Plata';
 
 const activeStudentId =
   user?.role === 'STUDENT' && user?.id
     ? user.id
     : '44444444-4444-4444-8444-444444444403';
+
+// Enlaces de navegación estrictamente aislados según el rol autenticado (Cero cruce de roles)
+const roleNavLinks =
+  user?.role === 'STUDENT'
+    ? [
+        { label: 'Calificaciones', href: '#calificaciones' },
+        { label: 'Simulador', href: '#simulador' },
+        { label: 'Matrícula', href: '#matricula' },
+        { label: 'Certificados', href: '#certificados' },
+      ]
+    : user?.role === 'TEACHER'
+      ? [
+          { label: 'Mi sede', href: '#sedes' },
+          { label: 'Planilla de notas', href: '#planilla' },
+        ]
+      : user?.role === 'ADMIN'
+        ? [
+            { label: 'Sedes', href: '#sedes' },
+            { label: 'Planilla consolidada', href: '#planilla' },
+            { label: 'Solicitudes', href: '#colas' },
+          ]
+        : [];
 ---
 
 <!doctype html>
@@ -35,14 +69,38 @@ const activeStudentId =
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#8B1E24" />
-    <title>{title} | EduDistribuida USCO-Net</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>{title} | Portal Académico USCO</title>
     <ClientRouter />
+    <script is:inline>
+      (function () {
+        try {
+          var savedTheme = window.localStorage.getItem('usco_theme');
+          if (savedTheme === 'light') {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+            document.documentElement.setAttribute('data-theme', 'light');
+          } else {
+            document.documentElement.classList.remove('light');
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+          var savedCompact = window.localStorage.getItem('usco_compact_tables') === 'true';
+          document.documentElement.classList.toggle('compact-tables', savedCompact);
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+  <body class="min-h-screen flex flex-col bg-[#070A12] text-slate-100 font-sans">
     <!-- Enlace de salto accesible WCAG AA -->
     <a
       href="#main-content"
-      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-xl focus:bg-usco-gold focus:text-slate-950 focus:font-bold"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-usco-gold focus:text-slate-950 focus:font-bold"
     >
       Saltar al contenido principal
     </a>
@@ -51,115 +109,124 @@ const activeStudentId =
     <header
       role="banner"
       aria-label="Cabecera Institucional Universidad Surcolombiana"
-      class="sticky top-0 z-40 border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-md"
+      class="sticky top-0 z-40 border-b border-slate-800/80 bg-[#070A12]/95 backdrop-blur-md"
     >
-      <div class="usco-gradient h-1.5 w-full"></div>
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="usco-header-strip h-1 w-full"></div>
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
         <!-- Identidad Institucional -->
-        <div class="flex items-center gap-3 min-w-0">
+        <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <a
             href={user ? (user.role === 'STUDENT' ? '/dashboard/estudiante' : '/dashboard/admin') : '/login'}
-            class="flex items-center gap-3 group"
-            aria-label="Inicio EduDistribuida Universidad Surcolombiana"
+            class="flex items-center gap-2.5 sm:gap-3 group min-w-0"
+            aria-label="Inicio Portal Académico Universidad Surcolombiana"
           >
-            <div class="w-10 h-10 rounded-xl bg-usco-wine border border-usco-gold/50 flex items-center justify-center font-mono font-extrabold text-usco-gold text-sm shadow-md group-hover:scale-105 transition-transform">
-              USCO
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-usco-wine border border-usco-gold/50 flex flex-col items-center justify-center shrink-0 shadow-sm group-hover:border-usco-gold transition-colors">
+              <span class="font-mono font-extrabold text-usco-gold text-[10px] sm:text-[11px] leading-none tracking-tighter">
+                USCO
+              </span>
+              <span class="text-[8px] font-mono text-white/80 leading-none mt-0.5">
+                1970
+              </span>
             </div>
             <div class="truncate">
               <div class="flex items-center gap-2">
-                <span class="font-bold text-white text-sm sm:text-base tracking-tight">
-                  EduDistribuida · USCO-Net
+                <span class="font-bold text-white text-xs sm:text-base tracking-tight truncate">
+                  Universidad Surcolombiana
                 </span>
-                <span class="hidden md:inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-usco-wine/40 text-usco-gold border border-usco-gold/30">
-                  PERIODO 2026-2
+                <span class="hidden md:inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-900 text-usco-gold border border-slate-700/80">
+                  2026-2
                 </span>
               </div>
-              <p class="text-[11px] text-slate-400 truncate">
-                Universidad Surcolombiana · Ingeniería de Software II
+              <p class="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                Sistema de Registro y Control Académico · Sedes Regionales
               </p>
             </div>
           </a>
         </div>
 
-        <!-- Indicador de Sede Activa, Enlaces de Navegación y Swagger -->
+        <!-- Navegación Contextual Aislada por Rol + Menú de Perfil -->
         <nav
           aria-label="Navegación Principal del Sistema"
-          class="flex items-center gap-2 sm:gap-3"
+          class="flex items-center gap-2 sm:gap-2.5 shrink-0"
         >
-          <!-- Indicador de Sede Activa -->
+          <!-- Indicador de Sede Asignada al Usuario -->
           <div
             data-testid="active-campus-indicator"
-            class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs"
+            class="hidden 2xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0D1322] border border-slate-800 text-xs"
           >
-            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span class="text-slate-400">Sede:</span>
-            <span class="font-semibold text-usco-gold">{activeCampusBadge}</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span class="text-slate-400">Jurisdicción:</span>
+            <span class="font-medium text-slate-200">{activeCampusBadge}</span>
           </div>
 
-          {user && (
-            <>
-              <a
-                href="/dashboard/estudiante"
-                class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-colors"
-              >
-                Portal Estudiante
-              </a>
-              <a
-                href="/dashboard/admin"
-                class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-colors"
-              >
-                Multi-Sede / Docente
-              </a>
-            </>
+          <!-- Enlaces internos exclusivos del rol actual (Sin permitir salto a otro rol) -->
+          {user && roleNavLinks.length > 0 && (
+            <div class="hidden lg:flex items-center bg-[#0D1322] p-0.5 rounded-lg border border-slate-800">
+              {roleNavLinks.map((item) => (
+                <a
+                  href={item.href}
+                  class="px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-300 hover:text-white hover:bg-usco-wine/80 transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
           )}
 
-          <!-- Enlace Rápido a Swagger OpenAPI -->
+          <!-- Enlace a documentación técnica: solo visible para Dirección de Registro (ADMIN) -->
+          {user?.role === 'ADMIN' && (
           <a
             href="http://localhost:4001/api/docs"
             target="_blank"
             rel="noopener noreferrer"
             data-testid="swagger-docs-link"
-            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-usco-gold border border-usco-gold/30 text-xs font-mono font-semibold transition-all"
+            class="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0D1322] hover:bg-slate-800/80 text-slate-300 hover:text-usco-gold border border-slate-800 text-xs transition-colors"
+            title="Documentación para integraciones"
           >
-            <span>Swagger OpenAPI</span>
+            <span>Documentación</span>
           </a>
+          )}
 
           {user ? (
-            <div class="flex items-center gap-2 pl-2 border-l border-slate-800">
-              <div class="hidden md:block text-right">
-                <p class="text-xs font-semibold text-white leading-tight truncate max-w-[160px]">
-                  {user.fullName}
-                </p>
-                <p class="text-[10px] font-mono text-usco-gold">
-                  {user.role} · {user.campusCode}
-                </p>
-              </div>
-              <a
-                href="/api/auth/logout"
-                id="logout-btn"
-                data-testid="logout-btn"
-                class="px-3 py-1.5 rounded-xl bg-red-950/70 hover:bg-red-900/80 text-red-200 border border-red-800/70 text-xs font-semibold transition-all"
-              >
-                Salir
-              </a>
-            </div>
+            <UserProfileMenuIsland client:load user={user} activeItemsCount={4} />
           ) : (
-            <a
-              href="/login"
-              class="px-3.5 py-1.5 rounded-xl bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/40 text-xs font-semibold transition-all"
-            >
-              Iniciar Sesión
-            </a>
+            currentPath !== '/login' && (
+              <a
+                href="/login"
+                class="px-3.5 py-1.5 rounded-lg bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/30 text-xs font-semibold transition-colors"
+              >
+                Iniciar sesión
+              </a>
+            )
           )}
         </nav>
       </div>
+
+      <!-- Barra de Navegación Rápida Móvil / Tablet (100% Responsive) -->
+      {user && roleNavLinks.length > 0 && (
+        <div class="lg:hidden border-t border-slate-800/80 bg-[#0D1322]/90 px-3 py-1.5 overflow-x-auto">
+          <div class="flex items-center gap-1.5 min-w-max">
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-usco-wine/30 text-usco-gold border border-usco-gold/30">
+              {activeCampusBadge}
+            </span>
+            {roleNavLinks.map((item) => (
+              <a
+                href={item.href}
+                class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-300 hover:text-white hover:bg-usco-wine/70 transition-colors"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </header>
 
     <!-- Contenido Principal Accesible -->
     <main
       id="main-content"
       role="main"
-      class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      class="flex-1 max-w-7xl w-full min-w-0 overflow-x-hidden mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 pb-20 sm:pb-10"
     >
       <slot />
     </main>
@@ -167,14 +234,14 @@ const activeStudentId =
     <!-- Pie de Página Institucional -->
     <footer
       role="contentinfo"
-      class="border-t border-slate-900 bg-slate-950/90 py-5 text-xs text-slate-400"
+      class="border-t border-slate-900 bg-[#05080F] py-5 text-xs text-slate-400 mt-12"
     >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
         <p>
-          <strong class="text-slate-200">Universidad Surcolombiana (USCO)</strong> · Sedes Neiva, Pitalito, Garzón y La Plata · Vigilada Mineducación
+          <strong class="text-slate-200 font-semibold">Universidad Surcolombiana (USCO)</strong> · NIT 891.180.084-2 · Neiva, Pitalito, Garzón y La Plata (Huila)
         </p>
-        <p class="font-mono text-[11px] text-slate-400">
-          Arquitectura Hexagonal · Astro 5 SSR (:4321) · Core (:4001) · BullMQ (:4002) · Chatbot IA (:4003)
+        <p class="font-mono text-[11px] text-slate-500">
+          Vicerrectoría Académica · Facultad de Ingeniería · Programa de Ingeniería de Software
         </p>
       </div>
     </footer>
@@ -189,19 +256,5 @@ const activeStudentId =
         />
       </div>
     )}
-
-    <script is:inline>
-      document.addEventListener('click', (event) => {
-        const target = event.target instanceof Element ? event.target.closest('#logout-btn') : null;
-        if (target) {
-          try {
-            window.localStorage.removeItem('edudistribuida_token');
-            window.localStorage.removeItem('edudistribuida_user');
-            document.cookie = 'edudistribuida_token=; Path=/; Max-Age=0; SameSite=Lax';
-            document.cookie = 'edudistribuida_user=; Path=/; Max-Age=0; SameSite=Lax';
-          } catch {}
-        }
-      });
-    </script>
   </body>
 </html>

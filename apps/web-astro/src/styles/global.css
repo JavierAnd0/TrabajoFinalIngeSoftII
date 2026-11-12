@@ -9,8 +9,27 @@
     color-scheme: dark;
   }
 
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   body {
-    @apply bg-slate-950 text-slate-100 antialiased selection:bg-usco-wine selection:text-white;
+    @apply bg-[#070A12] text-slate-100 antialiased selection:bg-usco-wine selection:text-white transition-colors duration-200;
+    overflow-x: hidden;
+    max-width: 100vw;
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(139, 30, 36, 0.14) 0%, transparent 45%),
+      radial-gradient(circle at 85% 0%, rgba(212, 175, 55, 0.06) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+
+  /* Numeración tabular para tablas de calificaciones, créditos y métricas */
+  .font-mono,
+  table td,
+  table th {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Focus visible accesible para cumplimiento WCAG AA */
@@ -21,9 +40,177 @@
 
 @layer utilities {
   .glass-card {
-    @apply bg-slate-900/85 backdrop-blur-md border border-slate-800/80 shadow-xl;
+    @apply bg-[#0D1322]/95 border border-slate-800/90 shadow-[0_8px_30px_rgb(0,0,0,0.35)] transition-colors duration-200;
   }
   .usco-gradient {
-    background: linear-gradient(135deg, #8B1E24 0%, #5c1116 60%, #1e1b4b 100%);
+    background: linear-gradient(135deg, #7A181E 0%, #520E13 55%, #1A0F13 100%);
   }
+  .usco-header-strip {
+    background: linear-gradient(90deg, #8B1E24 0%, #D4AF37 50%, #8B1E24 100%);
+  }
+}
+
+/* ============================================================================
+   MODO COMPACTO DE TABLAS (Activado desde el Popover de Usuario)
+   ============================================================================ */
+html.compact-tables table td,
+html.compact-tables table th {
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
+}
+
+/* ============================================================================
+   MODO CLARO INSTITUCIONAL USCO (html.light) — Alto Contraste Sin Colisiones
+   ============================================================================ */
+html.light {
+  color-scheme: light;
+}
+
+html.light body {
+  background-color: #F4F6F9 !important;
+  color: #0F172A !important;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(139, 30, 36, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 85% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 40%) !important;
+}
+
+html.light header[role="banner"] {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+html.light footer[role="contentinfo"] {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #475569 !important;
+}
+
+html.light .glass-card,
+html.light .user-popover-card {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08) !important;
+  color: #0F172A !important;
+}
+
+/* Superficies oscuras pasan a gris perla claro en Modo Claro, EXCEPTO dentro de .usco-gradient */
+html.light [class*="bg-[#070A12]"]:not(.usco-gradient *),
+html.light [class*="bg-[#0D1322]"]:not(.usco-gradient *),
+html.light [class*="bg-[#0B101D]"]:not(.usco-gradient *),
+html.light [class*="bg-[#090F1B]"]:not(.usco-gradient *),
+html.light [class*="bg-slate-950"]:not([role="dialog"]),
+html.light [class*="bg-slate-900"]:not(.usco-gradient *) {
+  background-color: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+  color: #0F172A !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-700,
+html.light [class*="border-slate-800"] {
+  border-color: #E2E8F0 !important;
+}
+
+html.light .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #E2E8F0 !important;
+}
+
+/* Tipografía en tarjetas blancas pasa a oscuro, EXCEPTO en botones primarios (.bg-usco-wine, .bg-emerald-700, .btn-keep-light) y banners .usco-gradient */
+html.light .text-white:not(.bg-usco-wine):not(.bg-usco-wine *):not(.bg-emerald-700):not(.bg-emerald-700 *):not(.btn-keep-light):not(.btn-keep-light *):not(.usco-gradient *),
+html.light .text-slate-100:not(.bg-usco-wine *):not(.usco-gradient *),
+html.light .text-slate-200:not(.bg-usco-wine *):not(.usco-gradient *) {
+  color: #0F172A !important;
+}
+
+html.light .text-slate-300:not(.bg-usco-wine *):not(.usco-gradient *) {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400:not(.bg-usco-wine *):not(.usco-gradient *) {
+  color: #475569 !important;
+}
+
+/* Dorado sobre blanco pasa a Vinotinto institucional para máximo contraste WCAG AAA */
+html.light .text-usco-gold:not(.bg-usco-wine *):not(.btn-keep-light *):not(.usco-gradient *) {
+  color: #8B1E24 !important;
+}
+
+/* Garantía explícita: Botones Vinotinto y Verdes SIEMPRE tienen texto blanco e íconos dorados */
+html.light .bg-usco-wine,
+html.light .bg-usco-wine span:not(.text-usco-gold):not([class*="bg-emerald"]),
+html.light .bg-emerald-700,
+html.light .bg-emerald-700 span,
+html.light .btn-keep-light,
+html.light .btn-keep-light span:not(.text-usco-gold):not([class*="bg-emerald"]) {
+  background-color: #8B1E24;
+  color: #FFFFFF !important;
+}
+
+/* Indicadores de estado "en línea" siempre verdes con anillo claro en Modo Claro */
+html.light span.bg-emerald-400 {
+  background-color: #10B981 !important;
+  --tw-ring-color: #FFFFFF !important;
+}
+
+html.light .bg-emerald-700 {
+  background-color: #047857 !important;
+}
+
+html.light .bg-usco-wine .text-usco-gold,
+html.light .usco-gradient .text-usco-gold {
+  color: #D4AF37 !important;
+}
+
+/* Badges semánticos en Modo Claro */
+/* Fondos vinotinto translúcidos (bg-usco-wine/20, /30...) pasan a rosa perla suave en Modo Claro */
+html.light [class^="bg-usco-wine/"]:not(.usco-gradient *),
+html.light [class*=" bg-usco-wine/"]:not(.usco-gradient *) {
+  background-color: #FBF1F1 !important;
+  border-color: rgba(139, 30, 36, 0.35) !important;
+}
+html.light [class*="bg-emerald-950"]:not(.usco-gradient *) {
+  background-color: #ECFDF5 !important;
+  border-color: #6EE7B7 !important;
+  color: #065F46 !important;
+}
+
+html.light [class*="text-emerald-300"]:not(.usco-gradient *),
+html.light [class*="text-emerald-400"]:not(.usco-gradient *) {
+  color: #047857 !important;
+}
+
+html.light [class*="bg-amber-950"] {
+  background-color: #FFFBEB !important;
+  border-color: #FCD34D !important;
+  color: #92400E !important;
+}
+
+html.light [class*="text-amber-300"] {
+  color: #B45309 !important;
+}
+
+html.light [class*="bg-red-950"] {
+  background-color: #FEF2F2 !important;
+  border-color: #FCA5A5 !important;
+  color: #991B1B !important;
+}
+
+html.light [class*="text-red-300"],
+html.light [class*="text-red-400"],
+html.light [class*="text-red-200"] {
+  color: #B91C1C !important;
+}
+
+html.light input:not([type="range"]),
+html.light select:not(#chatbot-engine-select) {
+  background-color: #FFFFFF !important;
+  border-color: #94A3B8 !important;
+  color: #0F172A !important;
+}
+
+html.light .hover\:bg-slate-800\/70:hover,
+html.light .hover\:bg-slate-800\/80:hover,
+html.light .hover\:bg-slate-900\/70:hover {
+  background-color: #F1F5F9 !important;
 }

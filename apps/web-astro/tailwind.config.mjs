@@ -6,8 +6,8 @@ export default {
       colors: {
         usco: {
           wine: '#8B1E24',
-          wineDark: '#6A1419',
-          wineLight: '#B02A31',
+          wineDark: '#5E1116',
+          wineLight: '#A5252C',
           gold: '#D4AF37',
           goldLight: '#F3E5AB',
           goldDark: '#AA8822',
@@ -15,8 +15,17 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        sans: [
+          '"Plus Jakarta Sans"',
+          'Inter',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'sans-serif',
+        ],
+        serif: ['"Instrument Serif"', 'Georgia', ' Cambria', 'serif'],
+        mono: ['"JetBrains Mono"', '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
     },
   },

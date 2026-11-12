@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduDistribuida / USCO-Net — Pitch Deck (10 Diapositivas)</title>
+  <style>
+    :root {
+      --usco-wine: #8B1E24;
+      --usco-gold: #D4AF37;
+      --dark-bg: #0F172A;
+      --card-bg: #1E293B;
+      --text-light: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #090D16;
+      color: var(--text-light);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .deck-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1200px;
+      height: 100%;
+      max-height: 675px;
+      background: var(--dark-bg);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-top: 8px solid var(--usco-wine);
+      border-radius: 16px;
+      padding: 44px 56px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65);
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .slide.active { display: flex; }
+    .slide.light {
+      background: #F8FAFC;
+      color: #0F172A;
+      border-top: 8px solid var(--usco-wine);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--usco-gold);
+      background: rgba(139, 30, 36, 0.35);
+      border: 1px solid var(--usco-gold);
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+    .slide.light .badge {
+      color: var(--usco-wine);
+      background: rgba(139, 30, 36, 0.1);
+      border-color: var(--usco-wine);
+    }
+    h1 { font-size: 46px; line-height: 1.15; font-weight: 800; margin-bottom: 14px; }
+    h2 { font-size: 30px; line-height: 1.2; font-weight: 800; margin-bottom: 8px; }
+    .subtitle { font-size: 17px; color: var(--text-muted); margin-bottom: 24px; }
+    .slide.light .subtitle { color: #475569; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; flex: 1; align-items: stretch; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; flex: 1; align-items: stretch; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .slide.light .card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+    }
+    .card h3 { font-size: 18px; color: var(--usco-gold); }
+    .slide.light .card h3 { color: var(--usco-wine); }
+    .card p, .card li { font-size: 14px; line-height: 1.55; color: #E2E8F0; }
+    .slide.light .card p, .slide.light .card li { color: #334155; }
+    .card ul { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+    .kpi-big { font-size: 54px; font-weight: 900; color: var(--usco-gold); line-height: 1; }
+    .footer-callout {
+      margin-top: 18px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, var(--usco-wine), #581115);
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 14px;
+      text-align: center;
+      border: 1px solid rgba(212, 175, 55, 0.4);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+    th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid rgba(148,163,184,0.2); }
+    th { background: var(--usco-wine); color: #FFFFFF; font-weight: 700; }
+    .ok { color: #10B981; font-weight: 700; }
+    .controls {
+      height: 56px;
+      background: #0F172A;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+    }
+    .btn {
+      background: #1E293B;
+      color: #F8FAFC;
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .btn:hover { background: var(--usco-wine); }
+    @media print {
+      body { overflow: visible; height: auto; background: #FFF; }
+      .controls { display: none; }
+      .deck-container { display: block; padding: 0; }
+      .slide { display: flex !important; page-break-after: always; max-width: 100%; height: 100vh; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck-container">
+    <!-- SLIDE 1 -->
+    <section class="slide active">
+      <div>
+        <span class="badge">Universidad Surcolombiana • Ingeniería de Software II</span>
+        <h1>EduDistribuida / USCO-Net</h1>
+        <p class="subtitle">Plataforma Distribuida de Gestión Académica Descentralizada Multi-Sede</p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>Arquitectura Limpia</h3>
+          <p>Microservicios bajo <strong>Arquitectura Hexagonal (Puertos y Adaptadores)</strong> con 0 dependencias de infraestructura en el dominio.</p>
+        </div>
+        <div class="card">
+          <h3>Cobertura Regional</h3>
+          <p>Operación concurrente en las <strong>4 sedes de la USCO</strong>: Neiva (<code>NEI</code>), Pitalito (<code>PIT</code>), Garzón (<code>GAR</code>) y La Plata (<code>LPL</code>).</p>
+        </div>
+        <div class="card">
+          <h3>Stack Moderno</h3>
+          <p>Astro 5 SSR + Islas React 18, Node.js 20 + TypeScript, Supabase PostgreSQL + Prisma ORM, Redis/BullMQ e IA Híbrida.</p>
+        </div>
+      </div>
+      <div class="footer-callout">Sustentación Final de Ingeniería de Software II • Fases 1 a 5 Verificadas al 100%</div>
+    </section>
+
+    <!-- SLIDE 2 -->
+    <section class="slide light">
+      <div>
+        <span class="badge">Diapositiva 02 • Problema de Ingeniería</span>
+        <h2>¿Por qué colapsan los sistemas académicos monolíticos?</h2>
+        <p class="subtitle">Tres cuellos de botella críticos durante matrículas, cierres de notas y expedición de certificados</p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>1. Contención de CPU e I/O</h3>
+          <p>Renderizar certificados PDF con QR y firmas SHA-256 síncronamente bloquea el hilo principal durante <strong>3.42 s</strong> bajo carga, agotando el pool de conexiones SQL.</p>
+        </div>
+        <div class="card">
+          <h3>2. Condiciones de Carrera</h3>
+          <p>La inscripción simultánea desde 4 sedes sin aislamiento transaccional ni control de cupos en dominio provoca sobrecupos y matrículas duplicadas.</p>
+        </div>
+        <div class="card">
+          <h3>3. Acoplamiento Rígido</h3>
+          <p>Mezclar controladores HTTP, SQL y servicios de terceros impide tolerar caídas de APIs externas de IA o escalar componentes independientemente.</p>
+        </div>
+      </div>
+      <div class="footer-callout">Solución: Separar el plano transaccional síncrono (&lt; 25 ms) del procesamiento asíncrono pesado mediante colas BullMQ.</div>
+    </section>
+
+    <!-- SLIDE 3 -->
+    <section class="slide">
+      <div>
+        <span class="badge">Diapositiva 03 • Modelo C4 Nivel 2</span>
+        <h2>Arquitectura Distribuida de Contenedores</h2>
+        <p class="subtitle">Orquestación de 6 contenedores con comunicación Síncrona (REST) y Asíncrona (Redis / BullMQ)</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>🌐 Web App Astro 5 SSR (:4321)</h3>
+          <p>BFF con Islas React 18, Nano Stores, Middleware JWT/RBAC por rol y persistencia del Chatbot con <code>ClientRouter</code>.</p>
+        </div>
+        <div class="card">
+          <h3>🏛️ Core Academic Service (:4001)</h3>
+          <p>Microservicio transaccional en Arquitectura Hexagonal: Autenticación JWT, Matrículas ACID, Notas 30/30/40 y Swagger OpenAPI 3.0.</p>
+        </div>
+        <div class="card">
+          <h3>⚙️ Async Worker Service (:4002)</h3>
+          <p>Consumidor <code>BullMQ</code> sobre Redis (:6379 AOF) que genera PDFs oficiales con <code>PDFKit</code>, QR y firma <code>SHA-256</code>.</p>
+        </div>
+        <div class="card">
+          <h3>🤖 Chatbot AI Service (:4003)</h3>
+          <p>Motor conversacional híbrido con <em>Function Calling</em> (Gemini 2.5 / Groq) + <em>Circuit Breaker</em> determinista (&lt; 5 ms).</p>
+        </div>
+      </div>
+      <div class="footer-callout">Capa de Persistencia: Supabase PostgreSQL 15 (:5432) con Políticas RLS, Triggers SQL y Prisma ORM.</div>
+    </section>
+
+    <!-- SLIDE 4 -->
+    <section class="slide light">
+      <div>
+        <span class="badge">Diapositiva 04 • Modelo C4 Nivel 3</span>
+        <h2>Arquitectura Hexagonal Estricta (Puertos y Adaptadores)</h2>
+        <p class="subtitle">Verificada automáticamente en GitHub Actions: 0 imports de infraestructura en src/domain/</p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>Adaptadores Primarios (Driving)</h3>
+          <ul>
+            <li>Controladores REST Express</li>
+            <li>Especificación OpenAPI 3.0</li>
+            <li>Workers consumidores BullMQ</li>
+            <li>Guards JWT, RBAC, Anti-IDOR y Zod</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Núcleo Aplicación y Dominio</h3>
+          <ul>
+            <li><code>GradeDomainService</code> (30%/30%/40%)</li>
+            <li><code>EnrollmentDomainService</code> (Cupos)</li>
+            <li>6 Casos de Uso desacoplados</li>
+            <li>Puertos Inbound y Outbound puros</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Adaptadores Secundarios (Driven)</h3>
+          <ul>
+            <li><code>PrismaAcademicRepository</code></li>
+            <li><code>BullMQPublisherAdapter</code></li>
+            <li><code>SupabaseStorageAdapter</code> + PDFKit</li>
+            <li><code>GeminiAndGroqFreeAIAdapter</code></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-callout">Fórmula de Dominio: Definitiva = 0.30·C1 + 0.30·C2 + 0.40·C3 | Nota requerida en C3 = (3.00 - Acumulado) / 0.40</div>
+    </section>
+
+    <!-- SLIDE 5 -->
+    <section class="slide">
+      <div>
+        <span class="badge">Diapositiva 05 • Procesamiento Asíncrono</span>
+        <h2>Desacoplamiento con Redis &amp; BullMQ (HTTP 202 Accepted)</h2>
+        <p class="subtitle">Eliminación del cuello de botella en expedición de Certificados de Estudio y Boletines</p>
+      </div>
+      <div class="grid-2">
+        <div class="card" style="justify-content:center; align-items:center; text-align:center;">
+          <div class="kpi-big">211.9x</div>
+          <h3>Aceleración en Tiempo de Respuesta</h3>
+          <p>De <strong>3,420.0 ms</strong> (Monolito Síncrono @ 100 VUs) a solo <strong>16.14 ms (p95)</strong> mediante encolado asíncrono.</p>
+        </div>
+        <div class="card">
+          <h3>Ciclo de Vida del Trabajo Asíncrono</h3>
+          <ul>
+            <li><strong>1. Encolado (&lt; 15 ms):</strong> Core crea <code>CertificateJob</code> en estado <code>QUEUED</code> y responde <code>HTTP 202 Accepted</code>.</li>
+            <li><strong>2. Renderizado Worker:</strong> Genera PDF con membrete USCO, tabla de notas, código <code>USCO-2026-XXXX</code> y QR.</li>
+            <li><strong>3. Firma Criptográfica:</strong> Calcula hash <code>SHA-256</code> canónico y pasa el estado a <code>COMPLETED</code>.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-callout">El estudiante monitorea el progreso en tiempo real (QUEUED → PROCESSING → COMPLETED) desde la Isla React.</div>
+    </section>
+
+    <!-- SLIDE 6 -->
+    <section class="slide light">
+      <div>
+        <span class="badge">Diapositiva 06 • Persistencia Descentralizada</span>
+        <h2>Modelo de Datos Multi-Sede y Row-Level Security (RLS)</h2>
+        <p class="subtitle">10 Modelos en Prisma ORM con particionamiento lógico por campusId en las 4 sedes de la USCO</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Sede Universitaria</th>
+            <th>Mecanismo de Integridad en PostgreSQL</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>NEI</strong></td><td>Sede Central Neiva</td><td>Políticas RLS por rol + <code>campusId</code></td><td class="ok">ACTIVA (2026-2)</td></tr>
+          <tr><td><strong>PIT</strong></td><td>Sede Sur Pitalito</td><td>Constraint <code>CHECK (occupiedQuota &lt;= maxQuota)</code></td><td class="ok">ACTIVA (2026-2)</td></tr>
+          <tr><td><strong>GAR</strong></td><td>Sede Centro Garzón</td><td>Trigger SQL <code>trg_recalculate_weighted_grade</code></td><td class="ok">ACTIVA (2026-2)</td></tr>
+          <tr><td><strong>LPL</strong></td><td>Sede Occidente La Plata</td><td>Trazabilidad en <code>ChatInteractionLog</code> y <code>CertificateJob</code></td><td class="ok">ACTIVA (2026-2)</td></tr>
+        </tbody>
+      </table>
+      <div class="footer-callout">Entidades: Campus • User • AcademicProgram • AcademicPeriod • Course • CourseSection • Enrollment • Grade • CertificateJob • ChatInteractionLog</div>
+    </section>
+
+    <!-- SLIDE 7 -->
+    <section class="slide">
+      <div>
+        <span class="badge">Diapositiva 07 • Fase 3: Inteligencia Artificial</span>
+        <h2>Chatbot Académico Híbrido: Strategy + Circuit Breaker</h2>
+        <p class="subtitle">Integración de LLMs gratuitos con Function Calling y respaldo determinista en &lt; 5 ms</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>🧠 Adaptador IA (Gemini 2.5 Flash / Groq Llama 3.3)</h3>
+          <ul>
+            <li>Ejecuta 4 herramientas reales sobre datos vivos del estudiante:</li>
+            <li><code>consultar_notas_y_promedio</code></li>
+            <li><code>consultar_horario_y_matricula</code></li>
+            <li><code>generar_certificado_academico</code> (encola PDF real)</li>
+            <li><code>consultar_calendario_y_reglamento</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>⚡ Circuit Breaker: Árbol Determinista (&lt; 5 ms)</h3>
+          <ul>
+            <li>Clasificador determinista de 7 intenciones académicas.</li>
+            <li>Conmuta automáticamente si no hay API Key, hay timeout o límite de cuota.</li>
+            <li>Devuelve tarjetas interactivas (<code>GRADES_TABLE</code> y <code>CERTIFICATE_CARD</code>).</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-callout">Cero alucinaciones: todos los cálculos de notas y certificados provienen de los casos de uso verificados del dominio.</div>
+    </section>
+
+    <!-- SLIDE 8 -->
+    <section class="slide light">
+      <div>
+        <span class="badge">Diapositiva 08 • Frontend BFF y Usabilidad</span>
+        <h2>Astro 5 SSR + Islas React 18 + Accesibilidad WCAG AAA</h2>
+        <p class="subtitle">Evaluación Heurística de Jakob Nielsen: 4.98 / 5.00 (99.6%)</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>📊 Islas para el Estudiante</h3>
+          <ul>
+            <li><strong>GradesTableIsland:</strong> Tabla ponderada 30/30/40 + Simulador interactivo de Corte 3.</li>
+            <li><strong>CourseEnrollmentIsland:</strong> Cupos en vivo e inscripción ACID en 1 clic.</li>
+            <li><strong>AsyncCertificateIsland:</strong> Polling asíncrono y descarga de PDF con QR.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>🛡️ Consola Docente / Admin y Accesibilidad</h3>
+          <ul>
+            <li><strong>AdminMultiCampusIsland:</strong> Métricas por sede, monitor BullMQ y edición de notas en vivo.</li>
+            <li><strong>Contraste W3C WCAG 2.1:</strong> 5/5 pares aprobados en nivel AAA (hasta 20.14:1).</li>
+            <li><strong>Navegación:</strong> 26 atributos ARIA, 46 selectores <code>data-testid</code> y persistencia del Chatbot.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-callout">Selector de Cuentas Demo en 1 Clic en /login para demostración instantánea de los 3 roles institucionales.</div>
+    </section>
+
+    <!-- SLIDE 9 -->
+    <section class="slide">
+      <div>
+        <span class="badge">Diapositiva 09 • Fase 4: Auditoría QA</span>
+        <h2>Resultados de Rendimiento (k6) y Seguridad OWASP Top 10</h2>
+        <p class="subtitle">2,800 peticiones concurrentes con 0.00% de error y 10/10 categorías OWASP superadas</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Escenario / Microservicio</th>
+            <th>p50</th>
+            <th>p95 (SLA &lt; 250 ms)</th>
+            <th>Throughput (100 VUs)</th>
+            <th>Error Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Core: Resumen Académico Estudiante</td><td>34.12 ms</td><td class="ok">48.65 ms</td><td>1,005.5 RPS</td><td class="ok">0.00%</td></tr>
+          <tr><td>Core: Métricas Multi-Sede (4 Sedes)</td><td>26.40 ms</td><td class="ok">37.80 ms</td><td>1,305.0 RPS</td><td class="ok">0.00%</td></tr>
+          <tr><td>Chatbot AI Service (Híbrido)</td><td>31.05 ms</td><td class="ok">44.90 ms</td><td>1,093.4 RPS</td><td class="ok">0.00%</td></tr>
+          <tr><td>Async Certificate Enqueue (HTTP 202)</td><td>12.98 ms</td><td class="ok">16.14 ms</td><td>3,227.9 RPS</td><td class="ok">0.00%</td></tr>
+        </tbody>
+      </table>
+      <div class="footer-callout">OWASP Top 10: 22/22 Aserciones Aprobadas (Bloqueo Anti-IDOR 403, RBAC 403, SQLi/XSS Zod 400, Brute-Force Rate Limit 429).</div>
+    </section>
+
+    <!-- SLIDE 10 -->
+    <section class="slide">
+      <div>
+        <span class="badge">Diapositiva 10 • Fase 5: DevOps, E2E y Cierre</span>
+        <h2>Contenerización Docker, Pruebas E2E Playwright y CI/CD</h2>
+        <p class="subtitle">Plataforma lista para producción y auditada de extremo a extremo</p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>🐳 Docker Compose</h3>
+          <p>6 contenedores multi-stage (<code>node:20-alpine</code>, <code>postgres:15-alpine</code>, <code>redis:7-alpine</code>) con red aislada y <code>healthcheck</code>s automáticos.</p>
+        </div>
+        <div class="card">
+          <h3>🎭 Playwright E2E (5/5)</h3>
+          <p>Flujos <code>E2E-01</code> a <code>E2E-05</code> 100% aprobados: Login JWT, Simulador C3, Matrícula en 1 clic, Chatbot IA y Certificado PDF con QR.</p>
+        </div>
+        <div class="card">
+          <h3>🔍 GitHub Quality Gate</h3>
+          <p>16,325 LOC auditadas, 0 errores TypeScript, 0 usos de <code>any</code>, <code>.gitignore</code> blindado y 4 jobs en GitHub Actions.</p>
+        </div>
+      </div>
+      <div class="footer-callout">¡Gracias! • Paso a Demostración en Vivo (http://localhost:4321/login) y Preguntas del Jurado</div>
+    </section>
+  </div>
+
+  <div class="controls">
+    <div>
+      <strong>EduDistribuida / USCO-Net</strong> • Pitch Deck (Usa las flechas <code>←</code> <code>→</code> o los botones)
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="btn" onclick="prevSlide()">← Anterior</button>
+      <span id="counter" style="font-size:14px; font-weight:700; min-width:70px; text-align:center;">1 / 10</span>
+      <button class="btn" onclick="nextSlide()">Siguiente →</button>
+      <button class="btn" onclick="window.print()">🖨️ Exportar PDF</button>
+    </div>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const counter = document.getElementById('counter');
+    let current = 0;
+    function showSlide(index) {
+      slides[current].classList.remove('active');
+      current = (index + slides.length) % slides.length;
+      slides[current].classList.add('active');
+      counter.textContent = (current + 1) + ' / ' + slides.length;
+    }
+    function nextSlide() { showSlide(current + 1); }
+    function prevSlide() { showSlide(current - 1); }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+  </script>
+</body>
+</html>
+

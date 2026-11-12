@@ -62,3 +62,12 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Carpetas locales de agentes IA y skills
+.agent/
+.agents/
+.claude/
+.cursor/
+.junie/
+.qwen/
+skills-lock.json

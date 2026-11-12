@@ -15,10 +15,10 @@ interface WeightedRule {
 }
 
 const DEFAULT_QUICK_REPLIES = [
-  '📊 Ver mis notas y promedio',
-  '🎯 ¿Cuánto necesito en el Corte 3?',
-  '📄 Generar certificado de estudio en PDF',
-  '📅 Mi horario y estado de matrícula',
+  'Ver mis notas y promedio',
+  '¿Cuánto necesito en el Corte 3?',
+  'Generar certificado de estudio en PDF',
+  'Mi horario y estado de matrícula',
 ];
 
 export class DeterministicRuleEngineAdapter implements IConversationalEnginePort {
@@ -143,7 +143,7 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
         const completedLines = completedCourses
           .map(
             (c) =>
-              `• **${c.courseCode} ${c.courseName}**: Corte 1 (${c.cut1?.toFixed(1)}) | Corte 2 (${c.cut2?.toFixed(1)}) | Corte 3 (${c.cut3?.toFixed(1)}) → **Definitiva: ${c.finalGrade?.toFixed(2)} (APROBADA ✅)**`
+              `• **${c.courseCode} ${c.courseName}**: Corte 1 (${c.cut1?.toFixed(1)}) | Corte 2 (${c.cut2?.toFixed(1)}) | Corte 3 (${c.cut3?.toFixed(1)}) → **Definitiva: ${c.finalGrade?.toFixed(2)} (Aprobada)**`
           )
           .join('\n');
 
@@ -166,7 +166,7 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
             : '• Ya tienes el 100% de los cortes calificados y aprobados en todas tus asignaturas.';
 
         const reply = [
-          `🎯 **Simulación Matemática de Corte 3 (40%) — ${studentContext.fullName}** (${studentContext.campusName}):`,
+          `**Simulación Matemática de Corte 3 (40%) — ${studentContext.fullName}** (${studentContext.campusName}):`,
           '',
           '**Asignaturas con Corte 3 pendiente:**',
           pendingLines,
@@ -206,7 +206,7 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
                 1
               )}** | C2: **${c.cut2?.toFixed(1)}** | C3: **${c.cut3.toFixed(
                 1
-              )}** → Definitiva: **${c.finalGrade.toFixed(2)}** (Aprobada ✅)`;
+              )}** → Definitiva: **${c.finalGrade.toFixed(2)}** (Aprobada)`;
             }
             return `• **${c.courseCode} - ${c.courseName}** (${c.credits} créd.): C1: **${c.cut1?.toFixed(
               1
@@ -221,7 +221,7 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
           .join('\n');
 
         const reply = [
-          `📊 **Resumen Académico en Vivo — ${studentContext.fullName}** (Código \`${studentContext.studentCode}\` | Sede **${studentContext.campusCity} - ${studentContext.campusCode}**):`,
+          `**Resumen Académico en Vivo — ${studentContext.fullName}** (Código \`${studentContext.studentCode}\` | Sede **${studentContext.campusCity} - ${studentContext.campusCode}**):`,
           '',
           `• **Programa:** ${studentContext.programName} (${studentContext.periodCode})`,
           `• **Promedio General Acumulado (PGA):** **${studentContext.pga.toFixed(2)} / 5.00**`,
@@ -265,13 +265,13 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
 
         const certLabel =
           certificateType === 'GRADES'
-            ? 'Certificado Oficial de Calificaciones (GRADES)'
+            ? 'Certificado Oficial de Calificaciones'
             : certificateType === 'GOOD_STANDING'
-            ? 'Certificado de Paz y Salvo Académico (GOOD_STANDING)'
-            : 'Certificado de Estudio Activo (STUDY)';
+            ? 'Certificado de Paz y Salvo Académico'
+            : 'Certificado de Estudio Activo';
 
         const reply = [
-          `📄 **¡Solicitud de Certificado Procesada Exitosamente!**`,
+          `**¡Solicitud de Certificado Procesada Exitosamente!**`,
           '',
           `He generado y registrado tu **${certLabel}** para **${studentContext.fullName}** (Código \`${studentContext.studentCode}\` — ${studentContext.campusName}):`,
           `• **ID de Trabajo (Job ID):** \`${generatedCert.id}\``,
@@ -314,7 +314,7 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
           .join('\n');
 
         const reply = [
-          `📅 **Horario y Matrícula Activa ${studentContext.periodCode} — ${studentContext.fullName}**`,
+          `**Horario y Matrícula Activa ${studentContext.periodCode} — ${studentContext.fullName}**`,
           `📍 **Sede:** ${studentContext.campusName} (\`${studentContext.campusCode}\`) | **Estado Financiero:** \`${studentContext.financialStatus}\``,
           '',
           scheduleLines,
@@ -359,7 +359,7 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
         const paymentLines = studentContext.courses
           .map(
             (c) =>
-              `• **${c.courseCode} ${c.courseName}**: Recibo \`${c.paymentReference}\` → Estado: **${c.paymentStatus}** ✅`
+              `• **${c.courseCode} ${c.courseName}**: Recibo \`${c.paymentReference}\` → Estado: **${c.paymentStatus}**`
           )
           .join('\n');
 
@@ -399,7 +399,7 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
 
       case 'INTENT_FAQ_CALENDAR': {
         const reply = [
-          `🏛️ **Calendario Académico Oficial ${studentContext.periodCode} y Reglamento Estudiantil USCO**`,
+          `**Calendario Académico Oficial ${studentContext.periodCode} y Reglamento Estudiantil USCO**`,
           '',
           '• **Inicio y Fin de Semestre:** 15 de agosto de 2026 al 20 de diciembre de 2026.',
           '• **Adición y Cancelación de Asignaturas:** Hasta la semana 4 del calendario académico sin afectación en hoja de vida.',
@@ -436,18 +436,18 @@ export class DeterministicRuleEngineAdapter implements IConversationalEnginePort
       case 'INTENT_HELP':
       default: {
         const reply = [
-          `👋 ¡Hola, **${studentContext.fullName}**! Soy el **Asistente Académico Inteligente USCO-Net** con soporte multi-sede en **Neiva (\`NEI\`), Pitalito (\`PIT\`), Garzón (\`GAR\`) y La Plata (\`LPL\`)**.`,
+          `Hola, **${studentContext.fullName}**. Soy el asistente académico de la Universidad Surcolombiana.`,
           '',
-          `Estás conectado en la **${studentContext.campusName}** — Programa de **${studentContext.programName}** (Periodo \`${studentContext.periodCode}\`, PGA actual: **${studentContext.pga.toFixed(
+          `Estás en la **${studentContext.campusName}**, programa de **${studentContext.programName}** (Periodo ${studentContext.periodCode} · PGA actual: **${studentContext.pga.toFixed(
             2
           )}**).`,
           '',
-          'Puedo ayudarte en tiempo real con:',
-          '1. 📊 **Consultar tus notas de los Cortes 1, 2 y 3** y tu promedio general.',
-          '2. 🎯 **Calcular cuánto necesitas en el Corte 3 (40%)** para aprobar cada materia en `3.00`.',
-          '3. 📄 **Generar y descargar certificados oficiales en PDF** con firma SHA-256 y QR (`STUDY`, `GRADES`, `GOOD_STANDING`).',
-          '4. 📅 **Ver tu horario de clases, aulas, docentes y estado de pago (`PAID`)**.',
-          '5. 🏛️ **Consultar fechas del Calendario Académico 2026-2 y reglamento USCO**.',
+          'Puedo ayudarte con:',
+          '1. **Consultar tus notas** de los Cortes 1, 2 y 3 y tu promedio general.',
+          '2. **Calcular cuánto necesitas en el Corte 3 (40%)** para aprobar cada asignatura en **3.00**.',
+          '3. **Expedir certificados oficiales en PDF** (de estudio, calificaciones o paz y salvo).',
+          '4. **Revisar tu horario de clases**, aulas, docentes y estado financiero.',
+          '5. **Consultar fechas del Calendario Académico 2026-2** y reglas de evaluación.',
         ].join('\n');
 
         return {

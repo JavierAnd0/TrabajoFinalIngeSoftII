@@ -15,6 +15,11 @@ import type {
 const sessionUser = Astro.locals.user;
 const token = Astro.locals.token;
 
+// Aislamiento RBAC: Si un Docente o Admin intenta abrir la vista privada de estudiante, redirigir a su consola
+if (sessionUser?.role === 'TEACHER' || sessionUser?.role === 'ADMIN') {
+  return Astro.redirect('/dashboard/admin');
+}
+
 const studentId =
   sessionUser?.role === 'STUDENT' && sessionUser?.id
     ? sessionUser.id
@@ -43,8 +48,8 @@ const enrolledCreditsDisplay = initialSummary
   ? `${initialSummary.metrics.enrolledCredits} Créditos (${initialSummary.metrics.enrolledCoursesCount} Cursos)`
   : '13 Créditos (4 Cursos)';
 const campusDisplay = initialSummary
-  ? `${initialSummary.student.campusName.split('-')[0].trim()} - ${initialSummary.student.campusCode}`
-  : 'Neiva - NEI';
+  ? `${initialSummary.student.campusName.split('-')[0].trim()} (${initialSummary.student.campusCode})`
+  : 'Sede Central Neiva (NEI)';
 const financialDisplay = initialSummary?.metrics.financialStatus || 'MATRÍCULA PAGADA';
 const studentFullName =
   initialSummary?.student.fullName || sessionUser?.fullName || 'Álvaro Javier Andrade';
@@ -53,41 +58,41 @@ const studentCode =
 ---
 
 <MainLayout
-  title="Dashboard del Estudiante · Ingeniería de Software"
+  title="Expediente Académico del Estudiante"
   user={sessionUser}
 >
-  <div class="space-y-8">
-    <!-- Encabezado de Perfil Estudiantil -->
+  <div class="space-y-6">
+    <!-- Encabezado Institucional de Expediente Estudiantil -->
     <section
       aria-label="Resumen de Perfil Académico del Estudiante"
-      class="usco-gradient rounded-2xl p-6 sm:p-7 border border-usco-gold/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+      class="usco-gradient rounded-xl p-5 sm:p-6 border border-usco-gold/30 flex flex-col md:flex-row md:items-center justify-between gap-4"
     >
       <div>
         <div class="flex flex-wrap items-center gap-2 mb-2">
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-950/80 text-usco-gold border border-usco-gold/40">
-            CÓDIGO ESTUDIANTIL: {studentCode}
+          <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold bg-[#070A12]/80 text-usco-gold border border-usco-gold/30">
+            CÓDIGO: {studentCode}
           </span>
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-emerald-950/90 text-emerald-300 border border-emerald-700/60">
-            PERIODO ACTIVO 2026-2
+          <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-medium bg-[#070A12]/80 text-slate-200 border border-slate-700/80">
+            PERIODO 2026-2 · ACTIVO
           </span>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+        <h1 class="text-xl sm:text-3xl font-bold text-white tracking-tight">
           {studentFullName}
         </h1>
-        <p class="text-sm text-slate-200 mt-1">
-          Programa de Ingeniería de Software · Facultad de Ingeniería · Universidad Surcolombiana
+        <p class="text-xs sm:text-sm text-slate-200/90 mt-1">
+          Ingeniería de Software · Facultad de Ingeniería · Universidad Surcolombiana
         </p>
       </div>
 
       <div class="flex items-center gap-3 self-start md:self-center">
-        <div class="px-4 py-2.5 rounded-xl bg-slate-950/80 border border-usco-gold/40 text-right">
-          <p class="text-[11px] uppercase tracking-wider text-slate-300">Nodo Regional RLS</p>
-          <p class="text-sm font-mono font-bold text-usco-gold">{campusDisplay}</p>
+        <div class="px-4 py-2.5 rounded-lg bg-[#070A12]/85 border border-slate-800 text-left md:text-right">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Sede</p>
+          <p class="text-xs sm:text-sm font-semibold text-usco-gold mt-0.5">{campusDisplay}</p>
         </div>
       </div>
     </section>
 
-    <!-- Tarjetas KPI Superiores -->
+    <!-- Indicadores Académicos del Semestre -->
     <section
       aria-label="Indicadores Clave de Rendimiento Académico (KPIs)"
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
@@ -95,99 +100,103 @@ const studentCode =
       <!-- KPI 1: Promedio General Acumulado (PGA) -->
       <div
         data-testid="pga-card"
-        class="glass-card rounded-2xl p-5 border border-usco-gold/40 flex flex-col justify-between"
+        class="glass-card rounded-xl p-4 border border-slate-800 flex flex-col justify-between"
       >
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Promedio General (PGA)
           </span>
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-usco-wine/40 text-usco-gold border border-usco-gold/30">
-            30% · 30% · 40%
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-usco-gold bg-usco-wine/30 border border-usco-gold/25">
+            30·30·40
           </span>
         </div>
-        <div class="mt-3 flex items-baseline gap-2">
+        <div class="mt-2.5 flex items-baseline gap-1.5">
           <span
             id="kpi-pga-value"
-            class="text-3xl font-mono font-extrabold text-usco-gold"
+            class="text-2xl font-mono font-bold text-usco-gold"
           >
             {pgaDisplay}
           </span>
-          <span class="text-xs text-slate-400 font-mono">/ 5.00</span>
+          <span class="text-xs text-slate-500 font-mono">/ 5.00</span>
         </div>
-        <p class="text-xs text-emerald-400 mt-2 font-medium">
-          Rendimiento Académico Sobresaliente
+        <p class="text-[11px] text-slate-400 mt-1.5">
+          Ponderado por créditos académicos
         </p>
       </div>
 
       <!-- KPI 2: Créditos Inscritos (2026-2) -->
       <div
         data-testid="credits-card"
-        class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between"
+        class="glass-card rounded-xl p-4 border border-slate-800 flex flex-col justify-between"
       >
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Créditos Inscritos (2026-2)
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Carga Académica
           </span>
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-950 text-slate-300 border border-slate-800">
-            ISW-NEI
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-slate-900 border border-slate-800">
+            2026-2
           </span>
         </div>
         <p
           id="kpi-credits-value"
-          class="mt-3 text-xl font-mono font-bold text-white"
+          class="mt-2.5 text-lg font-mono font-bold text-white"
         >
           {enrolledCreditsDisplay}
         </p>
-        <p class="text-xs text-slate-400 mt-2">
-          Tope semestral habilitado: 21 créditos
+        <p class="text-[11px] text-slate-400 mt-1.5">
+          Tope reglamentario: 21 créditos
         </p>
       </div>
 
       <!-- KPI 3: Sede Actual -->
       <div
         data-testid="campus-kpi-card"
-        class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between"
+        class="glass-card rounded-xl p-4 border border-slate-800 flex flex-col justify-between"
       >
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Sede Actual
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Sede Regional
           </span>
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60">
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-300 bg-emerald-950/80 border border-emerald-800/70">
             ACTIVA
           </span>
         </div>
-        <p class="mt-3 text-xl font-bold text-white">
+        <p class="mt-2.5 text-base font-bold text-white truncate">
           {campusDisplay}
         </p>
-        <p class="text-xs text-slate-400 mt-2">
-          Avenida Pastrana Borrero · Huila
+        <p class="text-[11px] text-slate-400 mt-1.5">
+          Av. Pastrana Borrero · Huila
         </p>
       </div>
 
       <!-- KPI 4: Estado Financiero -->
       <div
         data-testid="financial-status-card"
-        class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between"
+        class="glass-card rounded-xl p-4 border border-slate-800 flex flex-col justify-between"
       >
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Estado Financiero
           </span>
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60">
-            VERIFICADO
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-300 bg-emerald-950/80 border border-emerald-800/70">
+            PAZ Y SALVO
           </span>
         </div>
-        <p class="mt-3 text-lg font-mono font-extrabold text-emerald-400">
+        <p class="mt-2.5 text-base font-mono font-bold text-emerald-400">
           {financialDisplay}
         </p>
-        <p class="text-xs text-slate-400 mt-2">
-          Paz y Salvo Financiero y Biblioteca OK
+        <p class="text-[11px] text-slate-400 mt-1.5">
+          Derechos de matrícula liquidados
         </p>
       </div>
     </section>
 
-    <!-- Isla 1: Tabla de Calificaciones + Simulador Interactivo "¿Cuánto necesito en el Corte 3?" -->
-    <section aria-label="Calificaciones Ponderadas y Simulador de Corte 3">
+    <!-- Isla 1: Tabla de Calificaciones + Simulador de Corte 3 -->
+    <section
+      id="calificaciones"
+      aria-label="Calificaciones Ponderadas y Simulador de Corte 3"
+      class="min-w-0 max-w-full"
+    >
       <GradesTableIsland
         client:load
         studentId={studentId}
@@ -196,11 +205,12 @@ const studentCode =
       />
     </section>
 
-    <!-- Grilla Inferior: Inscripción de Cursos en 1 Clic + Emisión Asíncrona de Certificados PDF -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <!-- Grilla Inferior: Inscripción de Asignaturas + Certificados Oficiales PDF -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-w-0">
       <section
-        aria-label="Inscripción de Asignaturas en 1 Clic"
-        class="lg:col-span-7"
+        id="matricula"
+        aria-label="Inscripción de Asignaturas"
+        class="lg:col-span-7 min-w-0 max-w-full"
       >
         <CourseEnrollmentIsland
           client:load
@@ -212,8 +222,9 @@ const studentCode =
       </section>
 
       <section
-        aria-label="Generación Asíncrona de Certificados Académicos en PDF"
-        class="lg:col-span-5"
+        id="certificados"
+        aria-label="Solicitud de Certificados Académicos en PDF"
+        class="lg:col-span-5 min-w-0 max-w-full"
       >
         <AsyncCertificateIsland
           client:load

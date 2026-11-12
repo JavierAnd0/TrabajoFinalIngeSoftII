@@ -101,22 +101,22 @@ export default function CourseEnrollmentIsland({
   };
 
   return (
-    <div className="glass-card rounded-2xl p-6 border border-slate-800">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+    <div className="glass-card rounded-xl p-4 sm:p-6 border border-slate-800 min-w-0 max-w-full overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-800/80">
         <div>
           <div className="flex items-center gap-2">
-            <BookPlus className="w-5 h-5 text-usco-gold" />
-            <h2 className="text-lg font-bold text-white">
-              Oferta Académica y Cupos en Tiempo Real (Inscripción 1-Clic)
+            <BookPlus className="w-4 h-4 text-usco-gold" />
+            <h2 className="text-base sm:text-lg font-bold text-white">
+              Adición e Inscripción de Asignaturas
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Control transaccional ACID contra sobrecupo en PostgreSQL · Sede Activa ({campusId.slice(-2) === '01' ? 'Neiva - NEI' : 'USCO'})
+          <p className="text-xs text-slate-400 mt-0.5">
+            Oferta habilitada para el programa de Ingeniería de Software · Sede {campusId.slice(-2) === '01' ? 'Central Neiva (NEI)' : 'USCO'}
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-slate-950 text-usco-gold border border-usco-gold/30 self-start">
-          <Users className="w-3.5 h-3.5" />
-          {sections.length} Secciones Habilitadas
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium bg-[#070A12] text-slate-300 border border-slate-800 self-start">
+          <Users className="w-3.5 h-3.5 text-usco-gold" />
+          {sections.length} Grupos Abiertos
         </span>
       </div>
 
@@ -124,10 +124,10 @@ export default function CourseEnrollmentIsland({
         <div
           role="status"
           data-testid="enrollment-feedback"
-          className={`mb-5 p-3.5 rounded-xl border text-xs flex items-center gap-2.5 ${
+          className={`mb-5 p-3.5 rounded-lg border text-xs flex items-center gap-2.5 ${
             feedback.type === 'success'
-              ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200'
-              : 'bg-red-950/80 border-red-700 text-red-200'
+              ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200'
+              : 'bg-red-950/80 border-red-800 text-red-200'
           }`}
         >
           {feedback.type === 'success' ? (
@@ -150,33 +150,33 @@ export default function CourseEnrollmentIsland({
             <div
               key={sec.id}
               data-testid={`section-card-${sec.courseCode}`}
-              className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+              className={`p-4 rounded-lg border transition-colors flex flex-col justify-between ${
                 sec.isEnrolled
-                  ? 'bg-slate-900/90 border-emerald-800/70'
-                  : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
+                  ? 'bg-[#090F1B] border-emerald-800/60'
+                  : 'bg-[#070A12] border-slate-800/90 hover:border-slate-700'
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-usco-wine/40 text-usco-gold border border-usco-gold/30">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-usco-wine/30 text-usco-gold border border-usco-gold/30">
                         {sec.courseCode}
                       </span>
                       <span className="text-xs font-mono text-slate-400">
                         {sec.groupNumber} · {sec.credits} Créd.
                       </span>
                     </div>
-                    <h3 className="text-sm font-bold text-white mt-1.5">{sec.courseName}</h3>
+                    <h3 className="text-sm font-bold text-white mt-1.5 leading-snug">{sec.courseName}</h3>
                   </div>
 
                   {sec.isEnrolled ? (
-                    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700/60 shrink-0">
-                      Inscrita
+                    <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-800/70 shrink-0">
+                      Matriculada
                     </span>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold bg-slate-900 text-usco-gold border border-slate-700 shrink-0">
-                      {sec.availableQuota} libres
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-slate-900 text-usco-gold border border-slate-800 shrink-0">
+                      {sec.availableQuota} cupos
                     </span>
                   )}
                 </div>
@@ -196,12 +196,12 @@ export default function CourseEnrollmentIsland({
 
               <div className="mt-4 pt-3 border-t border-slate-800/80">
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-slate-400">Ocupación de Cupos:</span>
-                  <span className="font-mono font-semibold text-white">
+                  <span className="text-slate-400">Cupos ocupados:</span>
+                  <span className="font-mono font-medium text-slate-200">
                     {sec.occupiedQuota} / {sec.maxQuota} ({occupancyPct}%)
                   </span>
                 </div>
-                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden mb-3">
+                <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden mb-3">
                   <div
                     className={`h-full rounded-full transition-all ${
                       occupancyPct >= 90
@@ -219,10 +219,10 @@ export default function CourseEnrollmentIsland({
                     type="button"
                     disabled
                     data-testid={`enrolled-badge-${sec.courseCode}`}
-                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-800/70 flex items-center justify-center gap-1.5 cursor-default"
+                    className="w-full py-2 px-3 rounded-lg text-xs font-medium bg-emerald-950/50 text-emerald-300 border border-emerald-800/60 flex items-center justify-center gap-1.5 cursor-default"
                   >
                     <UserCheck className="w-4 h-4" />
-                    <span>Asignatura Matriculada Activa</span>
+                    <span>Asignatura Inscrita</span>
                   </button>
                 ) : (
                   <button
@@ -230,15 +230,15 @@ export default function CourseEnrollmentIsland({
                     data-testid={`enroll-btn-${sec.courseCode}`}
                     disabled={isFull || isBusy || loading}
                     onClick={() => handleEnroll(sec)}
-                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/40 shadow transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="w-full py-2 px-3 rounded-lg text-xs font-semibold bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/30 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     <PlusCircle className="w-4 h-4 text-usco-gold" />
                     <span>
                       {isBusy
-                        ? 'Procesando transacción ACID...'
+                        ? 'Registrando matrícula...'
                         : isFull
-                          ? 'Sin Cupos Disponibles'
-                          : `Inscribir Asignatura (${sec.courseCode})`}
+                          ? 'Cupo Agotado'
+                          : `Inscribir ${sec.courseCode}`}
                     </span>
                   </button>
                 )}
