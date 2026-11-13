@@ -67,10 +67,13 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
       DIRECT_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
       SUPABASE_URL: ${SUPABASE_URL:-http://supabase-db:5432}
-      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:?Defina SUPABASE_JWT_SECRET en .env (openssl rand -hex 32)}
       REDIS_HOST: redis-broker
       REDIS_PORT: 6379
       WORKER_SERVICE_URL: http://async-worker-service:4002
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Defina INTERNAL_SERVICE_TOKEN en .env (openssl rand -hex 32)}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?Defina PAYMENT_WEBHOOK_SECRET en .env (openssl rand -hex 32)}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4321}
     ports:
       - "4001:4001"
     volumes:
@@ -107,8 +110,9 @@ services:
       DIRECT_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
       REDIS_HOST: redis-broker
       REDIS_PORT: 6379
-      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:?Defina SUPABASE_JWT_SECRET en .env (openssl rand -hex 32)}
       SUPABASE_STORAGE_BUCKET: academic-certificates
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Defina INTERNAL_SERVICE_TOKEN en .env (openssl rand -hex 32)}
     ports:
       - "4002:4002"
     volumes:
@@ -145,6 +149,8 @@ services:
       DIRECT_URL: postgresql://postgres:postgres@supabase-db:5432/edudistribuida?schema=public
       CORE_SERVICE_URL: http://core-academic-service:4001
       WORKER_SERVICE_URL: http://async-worker-service:4002
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:?Defina SUPABASE_JWT_SECRET en .env (openssl rand -hex 32)}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Defina INTERNAL_SERVICE_TOKEN en .env (openssl rand -hex 32)}
       AI_PROVIDER: ${AI_PROVIDER:-gemini}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
@@ -192,6 +198,7 @@ services:
       CORE_SERVICE_URL: http://core-academic-service:4001
       WORKER_SERVICE_URL: http://async-worker-service:4002
       CHATBOT_SERVICE_URL: http://chatbot-ai-service:4003
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:?Defina SUPABASE_JWT_SECRET en .env (openssl rand -hex 32)}
     ports:
       - "4321:4321"
     networks:

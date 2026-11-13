@@ -80,7 +80,12 @@ export interface IEnrollmentRepository {
     observations?: string | null;
     updatedBy: string;
   }): Promise<AdminEnrollmentRecord>;
-  listAllEnrollmentsForAdmin(campusCode?: string): Promise<AdminEnrollmentRecord[]>;
+  listAllEnrollmentsForAdmin(
+    campusCode?: string,
+    teacherId?: string
+  ): Promise<AdminEnrollmentRecord[]>;
+  /** Devuelve el id del docente titular de la sección de la matrícula, o null si no existe. */
+  findSectionTeacherIdByEnrollment(enrollmentId: string): Promise<string | null>;
   confirmPaymentByWebhook(params: {
     paymentReference: string;
     status: 'PAID' | 'PENDING';

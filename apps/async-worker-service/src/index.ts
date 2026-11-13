@@ -1,5 +1,6 @@
 import { prisma } from '@edudistribuida/database';
 import cors from 'cors';
+import crypto from 'crypto';
 import express from 'express';
 import fs from 'fs/promises';
 import helmet from 'helmet';
@@ -34,12 +35,38 @@ const workerConsumer = new BullMQWorkerConsumer(
   notificationAdapter
 );
 
+// Solo se aceptan UUIDs o códigos USCO-AAAA-XXXX: evita path traversal (../) al leer disco.
+const CERTIFICATE_ID_REGEX = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|USCO-\d{4}-[A-Z0-9]{4,16})$/i;
+
+// Los endpoints /api/v1/worker/* son internos: exigen el token compartido de servicio.
+const requireInternalToken: express.RequestHandler = (req, res, next) => {
+  const provided = req.headers['x-internal-service-token'];
+  const expected = Buffer.from(workerEnv.INTERNAL_SERVICE_TOKEN);
+  const ok =
+    typeof provided === 'string' &&
+    provided.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(provided), expected);
+  if (!ok) {
+    res.status(401).json({ success: false, errorCode: 'INTERNAL_TOKEN_REQUIRED', message: 'Endpoint interno.' });
+    return;
+  }
+  next();
+};
+
 // Helper para servir o regenerar un PDF bajo demanda
 async function resolveAndSendPdf(
   identifierRaw: string,
   res: express.Response
 ): Promise<void> {
   const cleanId = identifierRaw.replace(/\.pdf$/i, '').trim();
+  if (!CERTIFICATE_ID_REGEX.test(cleanId)) {
+    res.status(400).json({
+      success: false,
+      errorCode: 'INVALID_CERTIFICATE_ID',
+      message: 'Identificador de certificado inválido.',
+    });
+    return;
+  }
   const directFilePath = path.join(
     workerEnv.PUBLIC_CERTIFICATES_DIR,
     `${cleanId}.pdf`
@@ -132,7 +159,7 @@ app.get('/metrics/queues', metricsHandler);
 app.get('/api/v1/metrics/queues', metricsHandler);
 
 // 3. Endpoint Asíncrono Interno de Procesamiento de Certificado PDF
-app.post('/api/v1/worker/process-certificate', async (req, res, next) => {
+app.post('/api/v1/worker/process-certificate', requireInternalToken, async (req, res, next) => {
   try {
     const { jobId, studentId, certificateType, verificationCode } = req.body || {};
     if (!jobId) {
@@ -161,7 +188,7 @@ app.post('/api/v1/worker/process-certificate', async (req, res, next) => {
 });
 
 // 4. Endpoint Asíncrono Interno de Notificaciones Académicas
-app.post('/api/v1/worker/process-notification', async (req, res, next) => {
+app.post('/api/v1/worker/process-notification', requireInternalToken, async (req, res, next) => {
   try {
     const result = await notificationAdapter.processNotification(req.body || {});
     res.status(200).json({

@@ -71,3 +71,6 @@ Thumbs.db
 .junie/
 .qwen/
 skills-lock.json
+
+# Volcados locales de Redis
+dump.rdb

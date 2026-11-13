@@ -1,0 +1,192 @@
+{
+  "project": "EduDistribuida / USCO-Net",
+  "type": "OWASP Top 10 — caja negra contra servicios reales",
+  "executedAt": "2026-11-13T03:44:46.611Z",
+  "targets": {
+    "CORE": "http://localhost:4001",
+    "WORKER": "http://localhost:4002",
+    "CHATBOT": "http://localhost:4003",
+    "WEB": "http://localhost:4321"
+  },
+  "summary": {
+    "total": 29,
+    "passed": 29,
+    "failed": 0
+  },
+  "results": [
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Listado global de matrículas sin token",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · MISSING_AUTH_TOKEN"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Listado global de matrículas con rol STUDENT",
+      "passed": true,
+      "detail": "HTTP 403 (esperado 403) · UNAUTHORIZED_ROLE"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Docente solo recibe matrículas de sus propios grupos",
+      "passed": true,
+      "detail": "docente=4 filas (fuera de sus grupos: 0) · admin=7 filas"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Expediente estudiantil sin token",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · MISSING_AUTH_TOKEN"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Header interno falsificado (x-internal-service: chatbot-ai-service)",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · MISSING_AUTH_TOKEN"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "IDOR horizontal: estudiante consulta expediente ajeno",
+      "passed": true,
+      "detail": "HTTP 403 (esperado 403) · IDOR_ACCESS_DENIED"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Estudiante consulta su propio expediente",
+      "passed": true,
+      "detail": "HTTP 200 (esperado 200)"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Escalada vertical: STUDENT modifica notas",
+      "passed": true,
+      "detail": "HTTP 403 (esperado 403) · UNAUTHORIZED_ROLE"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Docente califica una matrícula de un grupo que no dicta",
+      "passed": true,
+      "detail": "HTTP 403 (esperado 403) · UNAUTHORIZED_ROLE"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Solicitud de certificado sin token",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · MISSING_AUTH_TOKEN"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Estudiante solicita certificado a nombre de otro",
+      "passed": true,
+      "detail": "HTTP 403 (esperado 403) · IDOR_CERTIFICATE_FORBIDDEN"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Listado de certificados de otro estudiante sin token",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · MISSING_AUTH_TOKEN"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Webhook de pagos sin firma HMAC",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · INVALID_WEBHOOK_SIGNATURE"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Webhook de pagos con firma HMAC válida es aceptado",
+      "passed": true,
+      "detail": "HTTP 200 (esperado 200/404)"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Chatbot sin sesión",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · MISSING_AUTH_TOKEN"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Chatbot ignora studentId ajeno enviado por el navegador",
+      "passed": true,
+      "detail": "HTTP 200 · responde sobre: Álvaro (propio)"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Endpoint interno del worker sin token de servicio",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · INTERNAL_TOKEN_REQUIRED"
+    },
+    {
+      "category": "A01 Broken Access Control",
+      "name": "Portal: cookie de usuario falsificada con rol ADMIN",
+      "passed": true,
+      "detail": "HTTP 302 → /login"
+    },
+    {
+      "category": "A02 Cryptographic Failures",
+      "name": "JWT firmado con un secreto distinto",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · INVALID_JWT_TOKEN"
+    },
+    {
+      "category": "A02 Cryptographic Failures",
+      "name": "JWT con alg \"none\"",
+      "passed": true,
+      "detail": "HTTP 401 (esperado 401) · INVALID_JWT_TOKEN"
+    },
+    {
+      "category": "A02 Cryptographic Failures",
+      "name": "Portal: JWT con firma inválida no abre el panel",
+      "passed": true,
+      "detail": "HTTP 302 → /login"
+    },
+    {
+      "category": "A03 Injection",
+      "name": "SQLi en login (' OR 1=1 --)",
+      "passed": true,
+      "detail": "HTTP 400 (esperado 400) · MALICIOUS_PAYLOAD_DETECTED"
+    },
+    {
+      "category": "A03 Injection",
+      "name": "XSS en el chatbot (<script>)",
+      "passed": true,
+      "detail": "HTTP 400 (esperado 400) · VALIDATION_ERROR_OWASP_A03"
+    },
+    {
+      "category": "A03 Injection",
+      "name": "Path traversal en descarga de PDF del worker",
+      "passed": true,
+      "detail": "HTTP 400 (esperado 400/404) · INVALID_CERTIFICATE_ID"
+    },
+    {
+      "category": "A03 Injection",
+      "name": "Portal no sustituye un certificado inexistente por otro",
+      "passed": true,
+      "detail": "HTTP 404 (esperado 404)"
+    },
+    {
+      "category": "A05 Security Misconfiguration",
+      "name": "CORS no refleja orígenes no autorizados",
+      "passed": true,
+      "detail": "Access-Control-Allow-Origin: (ausente)"
+    },
+    {
+      "category": "A05 Security Misconfiguration",
+      "name": "Cabeceras de seguridad Helmet presentes",
+      "passed": true,
+      "detail": "CSP, HSTS, nosniff, frame-options"
+    },
+    {
+      "category": "A05 Security Misconfiguration",
+      "name": "Errores internos no exponen detalles",
+      "passed": true,
+      "detail": "HTTP 404, sin stack trace"
+    },
+    {
+      "category": "A07 Identification & Authentication Failures",
+      "name": "Rate limit tras intentos fallidos de login",
+      "passed": true,
+      "detail": "HTTP 429 (esperado 429) · TOO_MANY_LOGIN_ATTEMPTS"
+    }
+  ]
+}

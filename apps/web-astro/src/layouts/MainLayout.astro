@@ -34,10 +34,11 @@ const activeCampusBadge = user
     : CAMPUS_FULL_NAMES[user.campusCode] || user.campusName?.split('-')[0]?.trim() || 'Sede Central Neiva'
   : 'Neiva · Pitalito · Garzón · La Plata';
 
-const activeStudentId =
-  user?.role === 'STUDENT' && user?.id
-    ? user.id
-    : '44444444-4444-4444-8444-444444444403';
+// Documentación OpenAPI del Core, derivada de la URL pública configurada (no fija a localhost).
+const swaggerUrl = `${(import.meta.env.PUBLIC_CORE_API_URL || 'http://localhost:4001/api/v1').replace(/\/api\/v1\/?$/, '')}/api/docs`;
+
+// El asistente responde sobre el expediente del estudiante autenticado: solo se muestra a estudiantes.
+const showChatbot = !hideChatbot && user?.role === 'STUDENT';
 
 // Enlaces de navegación estrictamente aislados según el rol autenticado (Cero cruce de roles)
 const roleNavLinks =
@@ -50,7 +51,6 @@ const roleNavLinks =
       ]
     : user?.role === 'TEACHER'
       ? [
-          { label: 'Mi sede', href: '#sedes' },
           { label: 'Planilla de notas', href: '#planilla' },
         ]
       : user?.role === 'ADMIN'
@@ -121,7 +121,7 @@ const roleNavLinks =
             aria-label="Inicio Portal Académico Universidad Surcolombiana"
           >
             <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-usco-wine border border-usco-gold/50 flex flex-col items-center justify-center shrink-0 shadow-sm group-hover:border-usco-gold transition-colors">
-              <span class="font-mono font-extrabold text-usco-gold text-[10px] sm:text-[11px] leading-none tracking-tighter">
+              <span class="font-mono font-extrabold text-white text-[10px] sm:text-[11px] leading-none tracking-tighter">
                 USCO
               </span>
               <span class="text-[8px] font-mono text-white/80 leading-none mt-0.5">
@@ -176,7 +176,7 @@ const roleNavLinks =
           <!-- Enlace a documentación técnica: solo visible para Dirección de Registro (ADMIN) -->
           {user?.role === 'ADMIN' && (
           <a
-            href="http://localhost:4001/api/docs"
+            href={swaggerUrl}
             target="_blank"
             rel="noopener noreferrer"
             data-testid="swagger-docs-link"
@@ -240,19 +240,19 @@ const roleNavLinks =
         <p>
           <strong class="text-slate-200 font-semibold">Universidad Surcolombiana (USCO)</strong> · NIT 891.180.084-2 · Neiva, Pitalito, Garzón y La Plata (Huila)
         </p>
-        <p class="font-mono text-[11px] text-slate-500">
+        <p class="text-[11px] text-slate-400">
           Vicerrectoría Académica · Facultad de Ingeniería · Programa de Ingeniería de Software
         </p>
       </div>
     </footer>
 
     <!-- Widget Conversacional Flotante Persistente con ClientRouter -->
-    {!hideChatbot && (
+    {showChatbot && (
       <div transition:persist="chatbot-widget">
         <ChatbotWidget
           client:load
-          defaultStudentId={activeStudentId}
-          studentName={user?.fullName || 'Álvaro Javier Andrade'}
+          token={Astro.locals.token}
+          studentName={user?.fullName || ''}
         />
       </div>
     )}

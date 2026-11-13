@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import {
   CertificateJobStatus,
   CertificateType,
@@ -19,24 +20,36 @@ import {
   LogInteractionParams,
 } from '../../domain/ports/IAcademicContextPort';
 
-const DEFAULT_ALVARO_CODE = '20221203806';
-const DEFAULT_ALVARO_ID = '44444444-4444-4444-8444-444444444403';
+export class StudentNotFoundError extends Error {
+  constructor(identifier: string) {
+    super(`No se encontró el estudiante '${identifier}' en el registro académico.`);
+    this.name = 'StudentNotFoundError';
+  }
+}
+
+function newVerificationCode(): string {
+  return `USCO-2026-${randomBytes(4).toString('hex').toUpperCase()}`;
+}
 
 export class CoreAcademicContextAdapter implements IAcademicContextPort {
   private readonly coreServiceUrl: string;
   private readonly workerServiceUrl: string;
+  private readonly internalServiceToken: string;
 
   constructor() {
     this.coreServiceUrl = process.env.CORE_SERVICE_URL || 'http://localhost:4001';
     this.workerServiceUrl = process.env.WORKER_SERVICE_URL || 'http://localhost:4002';
+    this.internalServiceToken =
+      process.env.INTERNAL_SERVICE_TOKEN || 'dev-internal-service-token-change-me-0000';
   }
 
   public async getStudentAcademicContext(
     studentIdentifier?: string
   ): Promise<StudentAcademicContext> {
-    const cleanId = studentIdentifier?.trim() || DEFAULT_ALVARO_CODE;
+    const cleanId = studentIdentifier?.trim() || '';
+    if (!cleanId) throw new StudentNotFoundError('(vacío)');
 
-    let user = await prisma.user.findFirst({
+    const user = await prisma.user.findFirst({
       where: {
         OR: [
           { id: cleanId },
@@ -80,49 +93,7 @@ export class CoreAcademicContextAdapter implements IAcademicContextPort {
     });
 
     if (!user) {
-      user = await prisma.user.findFirst({
-        where: {
-          OR: [{ studentCode: DEFAULT_ALVARO_CODE }, { id: DEFAULT_ALVARO_ID }],
-        },
-        include: {
-          campus: true,
-          enrollments: {
-            where: {
-              status: 'ACTIVE',
-            },
-            include: {
-              period: true,
-              grade: true,
-              section: {
-                include: {
-                  course: {
-                    include: {
-                      program: true,
-                    },
-                  },
-                  teacher: true,
-                  campus: true,
-                },
-              },
-            },
-            orderBy: {
-              enrolledAt: 'asc',
-            },
-          },
-          certificateJobs: {
-            orderBy: {
-              requestedAt: 'desc',
-            },
-            take: 10,
-          },
-        },
-      });
-    }
-
-    if (!user) {
-      throw new Error(
-        `No se encontró el estudiante ${cleanId} ni el estudiante principal de demostración en PostgreSQL.`
-      );
+      throw new StudentNotFoundError(cleanId);
     }
 
     const courses: StudentCourseGradeContext[] = user.enrollments.map((enrollment) => {
@@ -222,7 +193,7 @@ export class CoreAcademicContextAdapter implements IAcademicContextPort {
 
     return {
       userId: user.id,
-      studentCode: user.studentCode || DEFAULT_ALVARO_CODE,
+      studentCode: user.studentCode || '',
       fullName: user.fullName,
       email: user.email,
       documentNumber: user.documentNumber,
@@ -254,7 +225,11 @@ export class CoreAcademicContextAdapter implements IAcademicContextPort {
 
       const response = await fetch(`${this.coreServiceUrl}/api/v1/certificates/request`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Credencial servicio-a-servicio: el chatbot ya restringió el contexto al usuario del JWT.
+          'x-internal-service-token': this.internalServiceToken,
+        },
         body: JSON.stringify({
           studentId: studentContext.userId,
           studentCode: studentContext.studentCode,
@@ -286,7 +261,7 @@ export class CoreAcademicContextAdapter implements IAcademicContextPort {
             status: payload.data.status || 'QUEUED',
             verificationCode:
               payload.data.verificationCode ||
-              `USCO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+              newVerificationCode(),
             pdfUrl: `${this.workerServiceUrl}/public/certificates/${jobId}.pdf`,
             requestedAt: payload.data.requestedAt || new Date().toISOString(),
             completedAt: payload.data.completedAt ?? null,
@@ -298,8 +273,7 @@ export class CoreAcademicContextAdapter implements IAcademicContextPort {
     }
 
     // 2. Fallback autónomo en PostgreSQL con Prisma + notificación opcional al Worker (4002)
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const verificationCode = `USCO-2026-${randomSuffix}`;
+    const verificationCode = newVerificationCode();
     const issuedIsoDate = new Date().toISOString();
 
     const digitalSignatureHash = generateCertificateSignatureHash({
@@ -335,7 +309,10 @@ export class CoreAcademicContextAdapter implements IAcademicContextPort {
       const workerTimeout = setTimeout(() => workerController.abort(), 1200);
       await fetch(`${this.workerServiceUrl}/api/v1/worker/process-certificate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-service-token': this.internalServiceToken,
+        },
         body: JSON.stringify({
           jobId: createdJob.id,
           studentId: studentContext.userId,
@@ -381,9 +358,9 @@ export class CoreAcademicContextAdapter implements IAcademicContextPort {
     });
   }
 
-  public async getSessionHistory(sessionId: string): Promise<ChatHistoryEntry[]> {
+  public async getSessionHistory(sessionId: string, studentId?: string): Promise<ChatHistoryEntry[]> {
     const logs = await prisma.chatInteractionLog.findMany({
-      where: { sessionId },
+      where: studentId ? { sessionId, studentId } : { sessionId },
       orderBy: { createdAt: 'asc' },
       take: 50,
     });

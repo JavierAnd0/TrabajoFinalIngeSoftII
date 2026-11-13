@@ -17,7 +17,7 @@ import {
 import { triggerAcademicSync } from '../../stores/academicStore';
 
 interface ChatbotWidgetProps {
-  defaultStudentId?: string;
+  token?: string | null;
   studentName?: string;
 }
 
@@ -98,8 +98,8 @@ function FormattedChatMessage({ text }: { text: string }) {
 }
 
 export default function ChatbotWidget({
-  defaultStudentId = '44444444-4444-4444-8444-444444444403',
-  studentName = 'Álvaro Javier Andrade',
+  token = null,
+  studentName = '',
 }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [preferredMode, setPreferredMode] = useState<'auto' | 'gemini' | 'groq' | 'deterministic'>(
@@ -114,7 +114,7 @@ export default function ChatbotWidget({
     {
       id: 'welcome-msg',
       sender: 'bot',
-      text: `Hola ${studentName}. Soy el asistente académico de la Universidad Surcolombiana. Puedo consultar tus calificaciones, simular la nota requerida en el Corte 3 o expedir tu certificado oficial en PDF.`,
+      text: `Hola${studentName ? ` ${studentName.split(' ')[0]}` : ''}. Soy el asistente académico de la Universidad Surcolombiana. Puedo consultar tus calificaciones, simular la nota requerida en el Corte 3 o expedir tu certificado oficial en PDF.`,
       timestamp: 'Ahora',
       engineUsed: 'USCO-ASISTENTE',
       latencyMs: 2,
@@ -149,7 +149,7 @@ export default function ChatbotWidget({
 
     try {
       const response = await sendChatbotMessage({
-        studentId: defaultStudentId,
+        token,
         sessionId,
         message: cleanText,
         preferredMode,
@@ -282,7 +282,7 @@ export default function ChatbotWidget({
       attachment.verificationCode ||
       attachment.pdfUrl
     ) {
-      const jobId = attachment.jobId || attachment.id || '88888888-8888-4888-8888-888888888801';
+      const jobId = attachment.jobId || attachment.id || '';
       const rawUrl = attachment.pdfUrl || `/api/certificates/${jobId}.pdf`;
       const pdfHref =
         rawUrl.startsWith('http') || rawUrl.startsWith('/api/certificates/')

@@ -20,21 +20,20 @@ if (sessionUser?.role === 'TEACHER' || sessionUser?.role === 'ADMIN') {
   return Astro.redirect('/dashboard/admin');
 }
 
-const studentId =
-  sessionUser?.role === 'STUDENT' && sessionUser?.id
-    ? sessionUser.id
-    : '44444444-4444-4444-8444-444444444403';
-
-const campusId =
-  sessionUser?.campusId || '11111111-1111-4111-8111-111111111101';
+// El middleware garantiza una sesión verificada de rol STUDENT en esta ruta.
+const studentId = sessionUser!.id;
+const campusId = sessionUser!.campusId;
 
 let initialSummary: StudentSummaryData | null = null;
 let initialSections: CourseSectionItem[] = [];
 
+let loadError: string | null = null;
+
 try {
   initialSummary = await fetchStudentSummary(studentId, token);
-} catch {
+} catch (err) {
   initialSummary = null;
+  loadError = err instanceof Error ? err.message : 'No fue posible cargar tu expediente.';
 }
 
 try {
@@ -43,18 +42,25 @@ try {
   initialSections = [];
 }
 
-const pgaDisplay = initialSummary ? initialSummary.metrics.pga.toFixed(2) : '4.52';
+// Sin datos del backend se muestra "—": nunca cifras inventadas.
+const pgaDisplay = initialSummary ? initialSummary.metrics.pga.toFixed(2) : '—';
 const enrolledCreditsDisplay = initialSummary
-  ? `${initialSummary.metrics.enrolledCredits} Créditos (${initialSummary.metrics.enrolledCoursesCount} Cursos)`
-  : '13 Créditos (4 Cursos)';
+  ? `${initialSummary.metrics.enrolledCredits} créditos · ${initialSummary.metrics.enrolledCoursesCount} cursos`
+  : '—';
 const campusDisplay = initialSummary
   ? `${initialSummary.student.campusName.split('-')[0].trim()} (${initialSummary.student.campusCode})`
-  : 'Sede Central Neiva (NEI)';
-const financialDisplay = initialSummary?.metrics.financialStatus || 'MATRÍCULA PAGADA';
-const studentFullName =
-  initialSummary?.student.fullName || sessionUser?.fullName || 'Álvaro Javier Andrade';
-const studentCode =
-  initialSummary?.student.studentCode || sessionUser?.studentCode || '20221203806';
+  : sessionUser!.campusName || '—';
+const CAMPUS_ADDRESSES: Record<string, string> = {
+  NEI: 'Av. Pastrana Borrero · Neiva',
+  PIT: 'Km 1 Vía Pitalito – Palestina',
+  GAR: 'Cra. 3 No. 1-31 · Garzón',
+  LPL: 'Km 1 Vía Fátima · La Plata',
+};
+const campusAddress = CAMPUS_ADDRESSES[initialSummary?.student.campusCode || sessionUser!.campusCode] || '';
+const financialDisplay = initialSummary?.metrics.financialStatus || '—';
+const isPaidUp = Boolean(initialSummary) && !/PENDIENTE/i.test(financialDisplay);
+const studentFullName = initialSummary?.student.fullName || sessionUser!.fullName;
+const studentCode = initialSummary?.student.studentCode || sessionUser!.studentCode || '—';
 ---
 
 <MainLayout
@@ -91,6 +97,13 @@ const studentCode =
         </div>
       </div>
     </section>
+
+    {loadError && (
+      <div role="alert" class="rounded-xl border border-amber-700/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+        <strong class="font-semibold">No pudimos cargar tu expediente.</strong> {loadError}
+        <a href="/dashboard/estudiante" class="ml-2 underline underline-offset-2 hover:text-white">Reintentar</a>
+      </div>
+    )}
 
     <!-- Indicadores Académicos del Semestre -->
     <section
@@ -165,7 +178,7 @@ const studentCode =
           {campusDisplay}
         </p>
         <p class="text-[11px] text-slate-400 mt-1.5">
-          Av. Pastrana Borrero · Huila
+          {campusAddress}
         </p>
       </div>
 
@@ -178,15 +191,22 @@ const studentCode =
           <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Estado Financiero
           </span>
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-300 bg-emerald-950/80 border border-emerald-800/70">
-            PAZ Y SALVO
-          </span>
+          {initialSummary && (
+            <span class:list={[
+              'px-1.5 py-0.5 rounded text-[10px] font-mono border',
+              isPaidUp
+                ? 'text-emerald-300 bg-emerald-950/80 border-emerald-800/70'
+                : 'text-amber-300 bg-amber-950/70 border-amber-700/70',
+            ]}>
+              {isPaidUp ? 'PAZ Y SALVO' : 'PENDIENTE'}
+            </span>
+          )}
         </div>
-        <p class="mt-2.5 text-base font-mono font-bold text-emerald-400">
+        <p class:list={['mt-2.5 text-base font-bold', isPaidUp ? 'text-emerald-400' : 'text-amber-300']}>
           {financialDisplay}
         </p>
         <p class="text-[11px] text-slate-400 mt-1.5">
-          Derechos de matrícula liquidados
+          {isPaidUp ? 'Derechos de matrícula liquidados' : 'Tienes recibos de matrícula por pagar'}
         </p>
       </div>
     </section>

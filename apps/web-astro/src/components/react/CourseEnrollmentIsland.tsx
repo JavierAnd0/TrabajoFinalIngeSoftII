@@ -35,6 +35,8 @@ export default function CourseEnrollmentIsland({
   const [sections, setSections] = useState<CourseSectionItem[]>(initialSections);
   const [loading, setLoading] = useState<boolean>(initialSections.length === 0);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  // Inscribir es una acción con consecuencias (cupo y créditos): se confirma en dos pasos.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
@@ -59,6 +61,7 @@ export default function CourseEnrollmentIsland({
   }, [studentId, campusId, syncVersion]);
 
   const handleEnroll = async (section: CourseSectionItem) => {
+    setConfirmingId(null);
     setFeedback(null);
     setEnrollingId(section.id);
     try {
@@ -100,6 +103,15 @@ export default function CourseEnrollmentIsland({
     }
   };
 
+  const MAX_CREDITS = 21;
+  const enrolledCredits = sections.filter((s) => s.isEnrolled).reduce((acc, s) => acc + s.credits, 0);
+  const remainingCredits = Math.max(0, MAX_CREDITS - enrolledCredits);
+  // Primero lo que el estudiante puede inscribir; luego lo ya matriculado.
+  const orderedSections = [...sections].sort(
+    (a, b) => Number(a.isEnrolled) - Number(b.isEnrolled) || a.courseCode.localeCompare(b.courseCode)
+  );
+  const availableCount = sections.filter((s) => !s.isEnrolled).length;
+
   return (
     <div className="glass-card rounded-xl p-4 sm:p-6 border border-slate-800 min-w-0 max-w-full overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-800/80">
@@ -107,16 +119,21 @@ export default function CourseEnrollmentIsland({
           <div className="flex items-center gap-2">
             <BookPlus className="w-4 h-4 text-usco-gold" />
             <h2 className="text-base sm:text-lg font-bold text-white">
-              Adición e Inscripción de Asignaturas
+              Inscripción de asignaturas
             </h2>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Oferta habilitada para el programa de Ingeniería de Software · Sede {campusId.slice(-2) === '01' ? 'Central Neiva (NEI)' : 'USCO'}
+            {availableCount === 0
+              ? 'Ya inscribiste todas las asignaturas ofertadas para tu programa.'
+              : `${availableCount} ${availableCount === 1 ? 'asignatura disponible' : 'asignaturas disponibles'} en tu sede.`}
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium bg-[#070A12] text-slate-300 border border-slate-800 self-start">
+        <span
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-[#070A12] text-slate-300 border border-slate-800 self-start"
+          title={`Tope reglamentario: ${MAX_CREDITS} créditos`}
+        >
           <Users className="w-3.5 h-3.5 text-usco-gold" />
-          {sections.length} Grupos Abiertos
+          Te quedan <strong className="text-white tabular-nums">{remainingCredits}</strong> créditos
         </span>
       </div>
 
@@ -140,11 +157,13 @@ export default function CourseEnrollmentIsland({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sections.map((sec) => {
+        {orderedSections.map((sec) => {
           const occupancyPct =
             sec.maxQuota > 0 ? Math.min(100, Math.round((sec.occupiedQuota / sec.maxQuota) * 100)) : 0;
           const isFull = sec.availableQuota <= 0;
           const isBusy = enrollingId === sec.id;
+          const exceedsCredits = !sec.isEnrolled && sec.credits > remainingCredits;
+          const isConfirming = confirmingId === sec.id;
 
           return (
             <div
@@ -222,22 +241,42 @@ export default function CourseEnrollmentIsland({
                     className="w-full py-2 px-3 rounded-lg text-xs font-medium bg-emerald-950/50 text-emerald-300 border border-emerald-800/60 flex items-center justify-center gap-1.5 cursor-default"
                   >
                     <UserCheck className="w-4 h-4" />
-                    <span>Asignatura Inscrita</span>
+                    <span>Inscrita</span>
                   </button>
+                ) : isConfirming ? (
+                  <div className="flex gap-2" role="group" aria-label={`Confirmar inscripción de ${sec.courseCode}`}>
+                    <button
+                      type="button"
+                      data-testid={`confirm-enroll-btn-${sec.courseCode}`}
+                      disabled={isBusy}
+                      onClick={() => handleEnroll(sec)}
+                      className="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/50 transition-colors disabled:opacity-60"
+                    >
+                      {isBusy ? 'Registrando…' : `Confirmar · ${sec.credits} créditos`}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => setConfirmingId(null)}
+                      className="py-2 px-3 rounded-lg text-xs font-medium text-slate-300 border border-slate-700 hover:bg-slate-800"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 ) : (
                   <button
                     type="button"
                     data-testid={`enroll-btn-${sec.courseCode}`}
-                    disabled={isFull || isBusy || loading}
-                    onClick={() => handleEnroll(sec)}
+                    disabled={isFull || isBusy || loading || exceedsCredits}
+                    onClick={() => setConfirmingId(sec.id)}
                     className="w-full py-2 px-3 rounded-lg text-xs font-semibold bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/30 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     <PlusCircle className="w-4 h-4 text-usco-gold" />
                     <span>
-                      {isBusy
-                        ? 'Registrando matrícula...'
-                        : isFull
-                          ? 'Cupo Agotado'
+                      {isFull
+                        ? 'Cupo agotado'
+                        : exceedsCredits
+                          ? `Supera tu tope de créditos`
                           : `Inscribir ${sec.courseCode}`}
                     </span>
                   </button>
