@@ -96,17 +96,20 @@ En la sección inferior derecha (**Emisión Asíncrona de Certificados PDF**):
    - `1. QUEUED (202)` → `2. PROCESSING` → `3. COMPLETED`.
 4. Al completarse (en menos de 2 segundos), aparecerá el **Código de Verificación Único** (ej. `USCO-2026-8841`), el hash criptográfico `SHA-256` y el botón verde **"Descargar PDF Oficial con QR y Hash SHA-256"**.
 
-### Paso 2.6. Uso del Asistente Virtual Híbrido `USCO-Bot IA`
-En la esquina inferior derecha de cualquier pantalla se encuentra el botón flotante **"USCO-Bot IA"**:
-1. Haga clic en el botón flotante para desplegar la ventana conversacional.
-2. En la cabecera puede elegir el **Motor IA** en vivo:
-   - `Auto (Híbrido IA + Fallback Determinista)`
-   - `IA Gratuita (Gemini / Groq Function Calling)`
-   - `Árbol de Reglas Deterministas (< 5 ms)`
-3. Puede utilizar los **Botones de Consulta Rápida en 1 Clic** o escribir en lenguaje natural:
-   - *"📊 Ver mis notas y promedio"* → Renderiza una tabla incrustada dentro del chat con las notas de cada corte y el PGA actual.
-   - *"🎯 ¿Cuánto necesito en el Corte 3?"* → Calcula exactamente cuánto necesita en las asignaturas con el tercer corte pendiente.
-   - *"📄 Generar certificado en PDF"* → Invoca internamente la herramienta `generar_certificado_academico` y entrega una tarjeta descargable con el PDF firmado y su código QR.
+### Paso 2.6. Menú de Cuenta, Modo Claro/Oscuro, Tablas Compactas y Experiencia Móvil
+En la esquina superior derecha de la barra institucional se encuentra el **Menú de Cuenta y Apariencia** (`UserProfileMenuIsland`):
+1. **Conmutador rápido de tema:** El botón de sol/luna permite alternar instantáneamente entre el **Modo Oscuro Institucional** y el **Modo Claro de Alto Contraste** (preferencia persistida en `localStorage`).
+2. **Popover de Perfil:** Al hacer clic en el avatar con indicador en línea, se despliega el menú con el rol del usuario, el nombre completo de su sede asignada (`Sede Central Neiva`, `Sede Pitalito`, etc.), accesos directos exclusivos de su rol, **Mi perfil**, **Apariencia** (incluyendo el interruptor de **Tablas compactas**) y **Cerrar sesión**.
+3. **Diseño 100% Responsive:** En dispositivos móviles (`< 768 px`), las tablas de calificaciones y la planilla docente cambian automáticamente a **Vista de Tarjetas** y el botón flotante del asistente se adapta a un ícono compacto.
+
+### Paso 2.7. Uso del Asistente Académico
+En la esquina inferior derecha de cualquier pantalla se encuentra el botón flotante **"Asistente Académico"**:
+1. Haga clic en el botón flotante para desplegar la ventana conversacional (y vuelva a pulsarlo para cerrarla).
+2. En la cabecera puede elegir el **Tipo de respuesta** (`Recomendado`, `Conversacional`, `Respuesta rápida` o `Conversacional alternativo`) o reiniciar la conversación con el botón de recarga.
+3. Puede utilizar los botones de **Consultas frecuentes** o escribir en lenguaje natural:
+   - *"Ver mis notas y promedio"* → Renderiza una tabla incrustada dentro del chat con las notas de cada corte y el PGA actual.
+   - *"¿Cuánto necesito en el Corte 3?"* → Calcula exactamente cuánto necesita en las asignaturas con el tercer corte pendiente.
+   - *"Generar certificado de estudio en PDF"* → Invoca la expedición asíncrona y entrega una tarjeta descargable con el PDF firmado y su código QR.
 
 ---
 

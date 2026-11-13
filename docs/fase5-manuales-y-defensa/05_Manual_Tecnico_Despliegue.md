@@ -75,7 +75,7 @@ TrabajoFinalIngeSoftII/
 │   │   └── src/                          # Strategy + Circuit Breaker (Gemini/Groq + Motor Determinista)
 │   └── web-astro/                        # @edudistribuida/web-astro (Puerto 4321)
 │       ├── Dockerfile                    # Imagen multi-stage Astro 5 SSR (@astrojs/node standalone)
-│       └── src/                          # pages/ + components/react/ + stores/ + services/
+│       └── src/                          # pages/ (incl. api/certificates/[id].ts) + middleware/ + components/react/ (incl. UserProfileMenuIsland.tsx)
 ├── qa-audits/                            # Suites automatizadas de Ingeniería de Calidad y Pruebas
 │   ├── performance-k6/                   # Pruebas de carga, estrés y concurrencia ACID con k6
 │   ├── security-owasp/                   # Auditoría automatizada OWASP Top 10:2021

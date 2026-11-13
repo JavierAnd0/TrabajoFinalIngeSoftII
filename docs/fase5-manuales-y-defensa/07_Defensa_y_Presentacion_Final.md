@@ -94,7 +94,8 @@
 
 ### Diapositiva 8: Frontend Moderno — Astro 5 SSR + React 18 Islands + Nanostores
 - **Contenido Técnico en Pantalla:**
-  - **Hidratación Parcial (Islands Architecture):** El servidor entrega HTML estático ultrarrápido y únicamente hidrata las islas interactivas necesarias (`GradesTableIsland`, `CourseEnrollmentIsland`, `AsyncCertificateIsland`, `ChatbotWidget`, `AdminMultiCampusIsland`).
+  - **Hidratación Parcial (Islands Architecture):** El servidor entrega HTML estático ultrarrápido y únicamente hidrata las islas interactivas necesarias (`GradesTableIsland`, `CourseEnrollmentIsland`, `AsyncCertificateIsland`, `ChatbotWidget`, `AdminMultiCampusIsland`, `UserProfileMenuIsland`).
+  - **UX Institucional, Aislamiento RBAC y Responsive:** Modo Oscuro / Modo Claro de alto contraste, vista automática en tarjetas para móviles (`< 768 px`), tablas compactas y aislamiento estricto por rol/sede tanto en middleware SSR (`middleware/index.ts`) como en la interfaz.
   - **Comunicación Reactiva Entre Islas (`$syncVersion` en Nanostores):** Cuando el estudiante inscribe `ISW-405` o solicita un certificado desde el Chatbot, todas las islas del Dashboard se sincronizan instantáneamente sin recargar el navegador.
 - **Visualización Recomendada:** Diagrama de las Islas React en `/dashboard/estudiante` conectadas al átomo reactivo `academicStore.ts`.
 - **Notas del Orador:** *"Con Astro 5 SSR e Islas de React 18 logramos lo mejor de ambos mundos: carga inicial instantánea desde el servidor y reactividad rica en el cliente."*

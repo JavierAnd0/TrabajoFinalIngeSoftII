@@ -1,8 +1,8 @@
 {
   "project": "EduDistribuida (USCO-Net) — Plataforma Académica Distribuida Multi-Sede",
   "phase": "Fase 5 — Validación de Aceptación End-to-End (Playwright + Contratos SSR/Hexagonal)",
-  "executedAt": "2026-11-08T18:27:22.321Z",
-  "totalDurationMs": 145,
+  "executedAt": "2026-11-12T21:39:02.301Z",
+  "totalDurationMs": 306,
   "summary": {
     "totalFlows": 5,
     "passedFlows": 5,
@@ -22,7 +22,7 @@
       "flowId": "E2E-01",
       "name": "Carga de Astro SSR (/login), selección de cuenta demo de estudiante y autenticación JWT exitosa",
       "status": "PASSED",
-      "latencyMs": 50,
+      "latencyMs": 52,
       "selectorsVerified": [
         "data-testid=\"demo-student-btn\"",
         "data-testid=\"login-email\"",
@@ -101,14 +101,14 @@
           "INTENT_GENERATE_CERTIFICATE"
         ],
         "engineUsed": "DETERMINISTIC_RULES",
-        "certificateGeneratedFromChat": "USCO-2026-978096F3"
+        "certificateGeneratedFromChat": "USCO-2026-924984CD"
       }
     },
     {
       "flowId": "E2E-05",
       "name": "Solicitud asíncrona de certificado académico (QUEUED -> PROCESSING -> COMPLETED) y generación PDF con QR y SHA-256",
       "status": "PASSED",
-      "latencyMs": 26,
+      "latencyMs": 48,
       "selectorsVerified": [
         "data-testid=\"certificate-type-select\"",
         "data-testid=\"request-certificate-btn\"",
@@ -118,14 +118,14 @@
       ],
       "evidence": {
         "jobId": "88888888-8888-4888-8888-888888888806",
-        "verificationCode": "USCO-2026-9091541C",
+        "verificationCode": "USCO-2026-27386FD6",
         "stateTransitions": [
           "QUEUED",
           "PROCESSING",
           "COMPLETED"
         ],
-        "digitalSignatureHash": "ba2b110c6951bfb6ead86714637a5e8e257a9f41afcce41baaf2df4b71dfe9c1",
-        "pdfSizeBytes": 7404,
+        "digitalSignatureHash": "7143afdc7b34ebfa305bb9c9ff8f3f162826b5697549ac519af5c466349b3082",
+        "pdfSizeBytes": 7407,
         "pdfHeaderMagic": "%PDF-",
         "downloadUrl": "http://localhost:4002/public/certificates/88888888-8888-4888-8888-888888888806.pdf"
       }
