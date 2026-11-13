@@ -39,10 +39,10 @@ export class ProcessAcademicChatUseCase {
         ? request.sessionId.trim()
         : `sess-usco-${Date.now()}`;
     const preferredMode: PreferredEngineMode = request.preferredMode ?? 'auto';
-    const studentIdentifier =
-      request.studentId && request.studentId.trim().length > 0
-        ? request.studentId.trim()
-        : '20221203806';
+    const studentIdentifier = request.studentId?.trim();
+    if (!studentIdentifier) {
+      throw new Error('studentId es obligatorio para construir el contexto académico.');
+    }
 
     // 1. Cargar contexto académico real y en vivo desde PostgreSQL / Core Service
     const studentContext =
@@ -125,8 +125,8 @@ export class ProcessAcademicChatUseCase {
     return fullResponse;
   }
 
-  public async getHistory(sessionId: string): Promise<ChatHistoryEntry[]> {
-    return this.academicContextPort.getSessionHistory(sessionId);
+  public async getHistory(sessionId: string, studentId?: string): Promise<ChatHistoryEntry[]> {
+    return this.academicContextPort.getSessionHistory(sessionId, studentId);
   }
 
   public getFaqTree(): FaqTreeNode[] {

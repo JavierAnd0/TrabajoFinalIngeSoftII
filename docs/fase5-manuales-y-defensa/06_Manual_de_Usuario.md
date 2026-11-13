@@ -20,7 +20,7 @@ flowchart LR
 
     DASH_EST --> KPI["1. Tarjetas KPI + Tabla 30/30/40"]
     DASH_EST --> SIM["2. Simulador Interactivo Corte 3"]
-    DASH_EST --> ENR["3. Inscripción de Cursos 1-Clic"]
+    DASH_EST --> ENR["3. Inscripción con confirmación"]
     DASH_EST --> CERT["4. Emisión Asíncrona PDF + QR"]
     DASH_EST --> BOT["5. Widget Flotante USCO-Bot IA"]
 
@@ -36,7 +36,8 @@ En la pantalla de inicio de sesión (`/login`), el usuario dispone del **Selecto
 | Perfil Institucional | Correo Electrónico | Contraseña | Sede Asignada | Ruta de Destino |
 | :--- | :--- | :---: | :---: | :--- |
 | **Estudiante Ingeniería de Software** | `alvaro.andrade@usco.edu.co` | `Usco2026*` | Sede Central Neiva (`NEI`) | `/dashboard/estudiante` |
-| **Docente Ingeniería de Software** | `docente.software@usco.edu.co` | `Usco2026*` | Sede Central Neiva (`NEI`) | `/dashboard/admin` |
+| **Docente Ingeniería de Software** | `docente.software@usco.edu.co` | `Usco2026*` | Grupos de Neiva (`NEI`) | `/dashboard/admin` |
+| **Docente regional** | `docente.regional@usco.edu.co` | `Usco2026*` | Grupos de Pitalito, Garzón y La Plata | `/dashboard/admin` |
 | **Administrador General Multi-Sede** | `admin@usco.edu.co` | `Usco2026*` | Global 4 Sedes (`NEI`, `PIT`, `GAR`, `LPL`) | `/dashboard/admin` |
 
 ---
@@ -73,17 +74,13 @@ Justo debajo de la tabla de calificaciones se ubica la tarjeta del **Simulador A
    $$\text{Definitiva} = (\text{Corte}_1 \times 0.30) + (\text{Corte}_2 \times 0.30) + (\text{Corte}_3 \times 0.40)$$
 4. El panel derecho mostrará la **Definitiva Proyectada** (`4.26`) y la **Nota mínima requerida en el Corte 3 para cerrar en 3.00** (`1.35`).
 
-### Paso 2.4. Inscripción de Asignaturas en 1 Clic con Control de Cupos en Tiempo Real
-En la sección inferior izquierda (**Oferta Académica y Cupos en Tiempo Real**):
-1. Revise las secciones habilitadas para la Sede Neiva. Verá las 4 materias ya inscritas (con insignia verde `Inscrita`) y **2 asignaturas con cupos libres**:
-   - `ISW-405` — **Inteligencia Artificial** (`10 libres`, ocupación `15 / 25`, Jueves 14:00 - 17:00).
-   - `ISW-302` — **Arquitectura de Computadores** (`18 libres`, ocupación `12 / 30`, Viernes 10:00 - 13:00).
-2. Haga clic en el botón **"Inscribir Asignatura (ISW-405)"**.
-3. El microservicio Core ejecuta una **transacción atómica ACID en PostgreSQL** que verifica ausencia de cruce de horarios, valida cupo disponible e incrementa `occupied_quota`.
-4. Sin recargar la página (gracias a la sincronización reactiva con **Nanostores**), observará:
-   - Mensaje de confirmación verde con el código de recibo generado.
-   - Actualización inmediata de la barra de ocupación a `16 / 25 (64%)`.
-   - Incorporación automática de `ISW-405` en la tabla superior de calificaciones y actualización del KPI de créditos a `16 Créditos (5 Cursos)`.
+### Paso 2.4. Inscripción de asignaturas (con confirmación)
+En la sección **Inscripción de asignaturas**:
+1. Arriba a la derecha verá **"Te quedan N créditos"** (tope reglamentario: 21 por periodo). Las asignaturas disponibles aparecen primero; las ya inscritas, al final con la insignia **Inscrita**.
+2. Pulse **"Inscribir ISW-405"**. El botón se convierte en **"Confirmar · 3 créditos"** y **"Cancelar"**: nada se registra hasta que confirme.
+3. Al confirmar, el Core valida en una transacción que haya cupo, que no esté inscrito ya en la asignatura y que no supere el tope de créditos.
+4. Si todo es correcto verá un mensaje verde, la barra de cupos actualizada y la asignatura en su tabla de calificaciones. Si el sistema lo rechaza (cupo agotado, tope de créditos), verá un mensaje rojo con el motivo exacto: **la inscripción no queda registrada**.
+5. Si una asignatura supera los créditos que le quedan, su botón aparece deshabilitado con el texto **"Supera tu tope de créditos"**.
 
 ### Paso 2.5. Expedición Asíncrona de Certificados Académicos en PDF (BullMQ + QR + SHA-256)
 En la sección inferior derecha (**Emisión Asíncrona de Certificados PDF**):
@@ -103,7 +100,7 @@ En la esquina superior derecha de la barra institucional se encuentra el **Menú
 3. **Diseño 100% Responsive:** En dispositivos móviles (`< 768 px`), las tablas de calificaciones y la planilla docente cambian automáticamente a **Vista de Tarjetas** y el botón flotante del asistente se adapta a un ícono compacto.
 
 ### Paso 2.7. Uso del Asistente Académico
-En la esquina inferior derecha de cualquier pantalla se encuentra el botón flotante **"Asistente Académico"**:
+El botón flotante **"Asistente Académico"** aparece en la esquina inferior derecha del panel del estudiante (solo para estudiantes con sesión iniciada; responde siempre sobre su propio expediente):
 1. Haga clic en el botón flotante para desplegar la ventana conversacional (y vuelva a pulsarlo para cerrarla).
 2. En la cabecera puede elegir el **Tipo de respuesta** (`Recomendado`, `Conversacional`, `Respuesta rápida` o `Conversacional alternativo`) o reiniciar la conversación con el botón de recarga.
 3. Puede utilizar los botones de **Consultas frecuentes** o escribir en lenguaje natural:
@@ -113,16 +110,16 @@ En la esquina inferior derecha de cualquier pantalla se encuentra el botón flot
 
 ---
 
-## 3. Guía Paso a Paso para el Rol Docente (`docente.software@usco.edu.co`)
+## 3. Guía paso a paso para el rol Docente
 
-1. En `/login`, seleccione la tarjeta **"Docente Ingeniería de Software — Sede Neiva (Ing. Carlos Eduardo Ramírez, M.Sc.)"** y presione **Ingresar**.
-2. Será dirigido al panel `/dashboard/admin` en modo **Rol Docente**.
-3. Diríjase a la sección inferior **"Editor de Calificaciones en Vivo"**:
-   - Localice al estudiante en la tabla (por ejemplo, `Álvaro Javier Andrade` en `ISW-403 — Mantenimiento y Pruebas de Software`).
-   - Ingrese la calificación del **Corte 3 (40%)** en la casilla numérica (rango permitido `0.0` a `5.0`, por ejemplo `4.5`).
-   - Observe cómo la columna **Definitiva** se recalcula instantáneamente en pantalla (`4.26`).
-   - Haga clic en el botón **"Guardar"**.
-4. El sistema enviará la petición `PUT /api/v1/grades` protegida por RBAC, actualizará el registro en PostgreSQL y publicará un evento asíncrono en la cola `notificationQueue` de Redis para notificar al estudiante.
+1. En `/login`, seleccione la tarjeta **Docente** (o escriba `docente.regional@usco.edu.co` para la docente de las sedes regionales) y presione **Ingresar**.
+2. Llegará a **Mis grupos y calificaciones**. Arriba verá cuatro indicadores de *sus* grupos: grupos a cargo, estudiantes, cortes 3 por registrar y promedio de las definitivas. Solo aparecen los estudiantes de los grupos que usted dicta, en cualquier sede.
+3. En la **Planilla de notas**:
+   - Busque al estudiante o la asignatura con el buscador.
+   - Escriba la nota del corte (0.0 a 5.0). La fila se marca en ámbar y aparece el aviso **"1 fila con cambios sin guardar"**; la definitiva se recalcula al instante.
+   - Pulse **Guardar** en esa fila. Al confirmarse, el botón cambia a **Guardado** y verá un mensaje verde. Si el servidor rechaza el cambio, verá el motivo en rojo y la fila seguirá marcada como pendiente.
+   - Si intenta cerrar o recargar la página con filas sin guardar, el navegador le pedirá confirmación.
+4. Cada nota guardada (`PUT /api/v1/grades`) publica un evento en la cola de notificaciones para avisar al estudiante.
 
 ---
 
@@ -131,5 +128,5 @@ En la esquina inferior derecha de cualquier pantalla se encuentra el botón flot
 1. En `/login`, seleccione la tarjeta **"Administrador General Multi-Sede (Dra. María Fernanda Perdomo)"** y presione **Ingresar**.
 2. En el panel `/dashboard/admin` tendrá acceso completo a las **3 consolas de gobierno distribuido**:
    - **Consolidado Multi-Sede Universidad Surcolombiana (4 Nodos Regionales):** Visualiza tarjetas interactivas para **Neiva (`NEI`)**, **Pitalito (`PIT`)**, **Garzón (`GAR`)** y **La Plata (`LPL`)** con el conteo de estudiantes, secciones abiertas y promedio académico por sede. Al hacer clic en cualquier tarjeta de sede, la tabla inferior se filtra instantáneamente para mostrar únicamente las matrículas de esa sede regional.
-   - **Monitor en Tiempo Real de Colas Asíncronas Redis / BullMQ (Worker :4002):** Muestra en vivo (con refresco automático cada 5 segundos) los contadores de trabajos `En Cola`, `Activos`, `Completados`, `Fallidos` y la `Latencia Media (ms)` tanto de `certificatePdfQueue` como de `notificationQueue`.
+   - **Solicitudes de certificados y notificaciones:** contadores en vivo (cada 5 segundos) de trabajos en espera, en curso, expedidos y fallidos. El indicador de estado es verde (**Al día**), ámbar (**Cola sin Redis**, modo respaldo) o rojo (**Servicio de certificados sin respuesta**).
    - **Editor Global de Calificaciones Multi-Sede:** Permite auditar y modificar calificaciones de cualquiera de las 4 sedes universitarias con trazabilidad completa.

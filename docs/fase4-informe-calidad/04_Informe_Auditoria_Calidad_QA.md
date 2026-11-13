@@ -1,193 +1,192 @@
-# 04. Informe Oficial de Auditoría de Aseguramiento de Calidad (QA), Ciberseguridad OWASP Top 10, Rendimiento Distribuido (k6) y Usabilidad (Nielsen / WCAG 2.1 AA)
+# 04. Informe de aseguramiento de calidad: rendimiento, seguridad y usabilidad
 
-**Proyecto:** Plataforma Distribuida de Gestión Académica Descentralizada — **EduDistribuida / USCO-Net**  
-**Institución:** Universidad Surcolombiana (USCO) — Facultad de Ingeniería — Programa de Ingeniería de Software  
-**Asignatura:** Ingeniería de Software II — **Fase 4: Pruebas de Rendimiento, Seguridad, Usabilidad y Mitigación**  
-**Sedes Regionales Integradas:** Neiva (`NEI`), Pitalito (`PIT`), Garzón (`GAR`) y La Plata (`LPL`)  
-**Arquitectura Auditada:** Microservicios con Arquitectura Hexagonal (*Ports & Adapters*), Astro 5 SSR + React 19 Islands (`:4321`), Core Academic API (`:4001`), Async Worker BullMQ + PDFKit (`:4002`), Chatbot IA Híbrido (`:4003`), PostgreSQL + Supabase RLS (`:5432`) y Redis (`:6379`)  
-**Estado Global de Certificación QA:** **APROBADO AL 100% (`PASSED_100_PERCENT`)**
+**Proyecto:** EduDistribuida / USCO-Net — Universidad Surcolombiana (sedes Neiva, Pitalito, Garzón y La Plata)
+**Fase 4 del enunciado:** someter el sistema a auditorías de rendimiento (carga y estrés), seguridad (OWASP Top 10) y usabilidad (evaluación heurística).
+**Entregable:** informe con métricas, gráficos de rendimiento y plan de mitigación.
+**Versión:** 2.0 — 13 de noviembre de 2026 (sustituye a la versión 1.0)
 
 ---
 
-## 1. Resumen Ejecutivo de la Auditoría de Fase 4
+## 0. Por qué existe una versión 2.0
 
-El presente informe documenta los resultados empíricos obtenidos al ejecutar la suite automatizada de aseguramiento de calidad (`qa-audits/`) sobre la plataforma **EduDistribuida / USCO-Net**. La auditoría evalúa cuatro dimensiones críticas para sistemas distribuidos de misión académica:
+La versión 1.0 de este informe reportaba "100 % aprobado" en las tres dimensiones. La auditoría integral (`docs/00_Auditoria_Integral_Proyecto.md`) comprobó que esas cifras **no provenían del sistema real**:
 
-| Dimensión Auditada | Herramienta / Estándar Oficial | Artefacto Ejecutable | Métrica / Resultado Obtenido | Estado |
-| :--- | :--- | :--- | :--- | :---: |
-| **1. Rendimiento, Carga y Estrés** | **Grafana k6** + Benchmark Concurrente (`10 → 50 → 100 VUs`) | `qa-audits/performance-k6/load-test-distributed.js`<br>`qa-audits/performance-k6/run-benchmark-and-charts.mjs` | **2,800 peticiones** ejecutadas · **`0.00%` Error Rate** · `p(95) <= 110.33 ms` (Umbral SLA `< 250 ms`) · Encolado `HTTP 202` en **`12.98 ms` (`p50`)** | ✅ **100% PASSED** |
-| **2. Ciberseguridad Perimetral y Dominio** | **OWASP Top 10 (2021 / 2025)** | `qa-audits/security-owasp/run-owasp-audit.mjs` (`npm run test:security`) | **10/10 Categorías Aprobadas** · **22/22 Aserciones Superadas (`100%`)** · Bloqueo efectivo de IDOR, RBAC, SQLi, XSS, JWT Tampering, Brute-Force (`429`) y SSRF | ✅ **100% PASSED** |
-| **3. Usabilidad Heurística** | **10 Heurísticas de Jakob Nielsen** | `qa-audits/usability-heuristics/run-usability-audit.mjs` | Puntaje Global: **`4.98 / 5.00` (`99.6%`)** sobre 17 archivos del frontend (`apps/web-astro/src`) | ✅ **EXCELENCIA** |
-| **4. Accesibilidad Web e Inclusión** | **W3C WCAG 2.1 Nivel AA / AAA** | `qa-audits/usability-heuristics/run-usability-audit.mjs` | **5/5 pares cromáticos** en nivel **AAA (`7.34:1` a `20.14:1`)** · **6/6 criterios estructurales** (`26 aria-*`, `10 role`, `5 htmlFor`, `46 data-testid`) | ✅ **WCAG AAA** |
+- La auditoría OWASP atacaba réplicas Express en memoria con rutas reescritas. El Core real exponía notas y correos de todos los estudiantes sin autenticación.
+- El benchmark medía servidores simulados sin base de datos, y la curva del "monolito síncrono" era un valor modelado.
+- Las puntuaciones de Nielsen estaban escritas a mano en el script.
 
----
+Esta versión reporta únicamente mediciones reproducibles contra los servicios en ejecución. Cada cifra tiene su comando y su informe JSON en `qa-audits/`.
 
-## 2. Pruebas de Rendimiento, Carga, Estrés y Colas Asíncronas (`k6`)
+### Resumen
 
-### 2.1. Diseño Experimental y Escenarios de Carga Concurrente
-
-La suite oficial de pruebas de carga (`qa-audits/performance-k6/load-test-distributed.js`) y el motor de benchmark (`qa-audits/performance-k6/run-benchmark-and-charts.mjs`) someten el ecosistema distribuido a un perfil de escalamiento progresivo de **`10 VUs` (Carga Base) → `50 VUs` (Carga Media) → `100 VUs` (Pico de Estrés de Matrícula yCierre de Semestre)** a través de tres escenarios concurrentes:
-
-1. **Escenario 1 (`academic_summary_read` & `campuses_metrics_read`):** Lectura intensiva del resumen académico ponderado del estudiante (`GET /api/v1/students/20221203806/summary`, ejecutando el cálculo `30% / 30% / 40%` y proyección de Corte 3 en `GradeDomainService`) y consulta descentralizada de las 4 sedes regionales (`GET /api/v1/campuses`).
-2. **Escenario 2 (`chatbot_concurrent_queries`):** Ráfaga de consultas conversacionales concurrentes al microservicio **Chatbot IA Híbrido (`:4003`)** (`POST /api/v1/chat/message`) alternando las 4 intenciones académicas críticas (`INTENT_GRADES`, `INTENT_NEEDED_SCORE`, `INTENT_SCHEDULE`, `INTENT_FAQ_CALENDAR`).
-3. **Escenario 3 (`async_certificate_burst` & `worker_queue_telemetry`):** Ráfaga de solicitudes de expedición de certificados oficiales en PDF (`POST /api/v1/certificates/request`), evaluando el desacoplamiento asíncrono mediante **BullMQ (`HTTP 202 Accepted`)** frente al renderizado criptográfico en segundo plano (`PDFKit` + `QRCode` + `SHA-256`) en el **Async Worker Service (`:4002`)**.
-
-### 2.2. Matriz Consolidada de Resultados por Percentil (`100 VUs` — Pico de Estrés)
-
-Todos los microservicios cumplieron holgadamente el Acuerdo de Nivel de Servicio (**SLA**) exigido en la Fase 4 (`http_req_duration p(95) < 250 ms`, `http_req_failed < 1.00%` y encolado asíncrono `HTTP 202 p(50) < 15 ms`):
-
-| Microservicio / Endpoint Auditado | Puerto | Mín (`ms`) | Mediana `p50` (`ms`) | `p90` (`ms`) | `p95` SLA (`ms`) | `p99` (`ms`) | Máx (`ms`) | Media (`ms`) | Throughput (`RPS` @ 100 VUs) | Tasa de Error | Cumplimiento SLA (`p95 < 250 ms`) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Core:** `GET /api/v1/students/20221203806/summary` | `:4001` | `46.99` | **`80.77`** | `107.38` | **`110.33`** | `115.71` | `115.97` | `81.45` | **`1,005.5 req/s`** | `0.00%` | ✅ **CUMPLIDO (-55.9%)** |
-| **Core:** `GET /api/v1/campuses` (4 Sedes USCO) | `:4001` | `34.32` | **`58.47`** | `77.85` | **`80.35`** | `82.43` | `82.92` | `58.63` | **`1,305.0 req/s`** | `0.00%` | ✅ **CUMPLIDO (-67.9%)** |
-| **Chatbot IA:** `POST /api/v1/chat/message` | `:4003` | `45.15` | **`73.24`** | `96.70` | **`99.67`** | `101.95` | `102.83` | `73.46` | **`1,093.4 req/s`** | `0.00%` | ✅ **CUMPLIDO (-60.1%)** |
-| **Async Queue:** `POST /api/v1/certificates/request` (`202`) | `:4001→:4002` | `9.07` | **`12.98`** | `15.62` | **`16.14`** | `16.95` | `17.38` | `12.98` | **`3,227.9 req/s`** | `0.00%` | ✅ **CUMPLIDO (< 15 ms p50)** |
-| **Worker BullMQ:** `GET /metrics/queues` | `:4002` | `8.52` | **`14.93`** | `19.25` | **`20.41`** | `21.46` | `21.67` | `14.89` | **`3,040.4 req/s`** | `0.00%` | ✅ **CUMPLIDO (-91.8%)** |
-
-![Distribución de Latencia por Percentiles (p50, p90, p95, p99)](./latency_percentiles.png)
+| Dimensión | Herramienta | Línea base (`909ddaf`) | Versión corregida |
+| :--- | :--- | :-: | :-: |
+| Seguridad OWASP Top 10 | `npm run test:security` (29 controles de caja negra) | 11 / 29 | **29 / 29** |
+| Rendimiento | `npm run test:load` (10 → 50 → 100 usuarios) | no medido | p95 15–177 ms · **0 % errores** |
+| Accesibilidad WCAG 2.1 A/AA | `npm run test:a11y` (axe-core, 8 vistas) | 42 nodos con violaciones | **0** |
+| Aceptación E2E | `npm run test:e2e` (Playwright) | 0 / 5 (pruebas desactualizadas) | **5 / 5** |
 
 ---
 
-### 2.3. Evolución del Throughput (`RPS`) y Escalabilidad por Etapas (`10 → 50 → 100 VUs`)
+## 1. Rendimiento: carga y estrés
 
-La siguiente tabla detalla el comportamiento elástico de los tres microservicios a medida que la concurrencia se multiplica por `10x` (de `10 VUs` a `100 VUs`), demostrando ausencia total de degradación catastrófica o bloqueo de hilos:
+### 1.1. Diseño de la prueba
 
-| Escenario de Prueba | Etapa 1: `10 VUs` (`p50` / `p95` / `RPS`) | Etapa 2: `50 VUs` (`p50` / `p95` / `RPS`) | Etapa 3: `100 VUs` (`p50` / `p95` / `RPS`) | Peticiones Exitosas | Fallos HTTP |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **`academic_summary_read`** (`GET /summary`) | `23.64 ms` / `32.70 ms` / **`238.5 RPS`** | `47.66 ms` / `64.85 ms` / **`762.2 RPS`** | `80.77 ms` / `110.33 ms` / **`1,005.5 RPS`** | `560 / 560` | `0 (0.00%)` |
-| **`campuses_metrics_read`** (`GET /campuses`) | `16.35 ms` / `21.47 ms` / **`291.5 RPS`** | `34.82 ms` / `46.46 ms` / **`950.9 RPS`** | `58.47 ms` / `80.35 ms` / **`1,305.0 RPS`** | `560 / 560` | `0 (0.00%)` |
-| **`chatbot_concurrent_queries`** (`POST /chat/message`) | `20.27 ms` / `26.69 ms` / **`261.8 RPS`** | `43.20 ms` / `58.89 ms` / **`815.5 RPS`** | `73.24 ms` / `99.67 ms` / **`1,093.4 RPS`** | `560 / 560` | `0 (0.00%)` |
-| **`async_certificate_burst`** (`POST /certificates/request`) | `5.10 ms` / `7.37 ms` / **`431.2 RPS`** | `8.38 ms` / `10.48 ms` / **`1,893.9 RPS`** | `12.98 ms` / `16.14 ms` / **`3,227.9 RPS`** | `560 / 560` | `0 (0.00%)` |
-| **`worker_queue_telemetry`** (`GET /metrics/queues`) | `4.94 ms` / `6.46 ms` / **`435.5 RPS`** | `9.52 ms` / `12.24 ms` / **`1,818.2 RPS`** | `14.93 ms` / `20.41 ms` / **`3,040.4 RPS`** | `560 / 560` | `0 (0.00%)` |
+- **Runner:** `qa-audits/performance-k6/run-real-load-test.mjs` (bucle cerrado: N usuarios concurrentes envían una petición, esperan la respuesta y repiten durante 8 s por etapa). El script de k6 `load-test-distributed.js` se mantiene para entornos con k6 instalado.
+- **Etapas:** 10, 50 y 100 usuarios concurrentes por endpoint.
+- **Ruta completa:** HTTP → Express → validación JWT → Prisma → PostgreSQL (y Redis/BullMQ en certificados). Nada simulado.
+- **Entorno:** una máquina de 4 vCPU (Xeon 2.1 GHz), Node 22, servicios en modo desarrollo (`tsx`), PostgreSQL 16 y Redis 7 locales. En producción (código compilado, servidores dedicados) se esperan latencias menores; lo relevante aquí es la forma de las curvas y la ausencia de errores.
 
-![Throughput Distribuido en Peticiones por Segundo (RPS) por Microservicio](./throughput_rps_by_service.png)
+### 1.2. Resultados
 
----
+| Endpoint | Usuarios | Peticiones | Throughput | p50 | p95 | p99 | Errores |
+| :--- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| `GET /campuses` (lectura pública) | 10 | 8 358 | 1 044 req/s | 9.0 ms | 15.3 ms | 20.3 ms | 0 % |
+| | 50 | 10 463 | 1 302 req/s | 37.6 ms | 47.5 ms | 54.1 ms | 0 % |
+| | 100 | 10 648 | 1 321 req/s | 74.2 ms | 88.4 ms | 102.4 ms | 0 % |
+| `GET /students/:id/summary` (JWT) | 10 | 5 452 | 680 req/s | 14.2 ms | 20.4 ms | 24.6 ms | 0 % |
+| | 50 | 5 959 | 741 req/s | 68.3 ms | 84.5 ms | 92.9 ms | 0 % |
+| | 100 | 5 924 | 732 req/s | 139.3 ms | 168.9 ms | 179.6 ms | 0 % |
+| `GET /admin/enrollments` (JWT admin) | 10 | 4 530 | 566 req/s | 17.2 ms | 23.7 ms | 27.9 ms | 0 % |
+| | 50 | 4 679 | 580 req/s | 85.2 ms | 97.9 ms | 107.8 ms | 0 % |
+| | 100 | 4 988 | 612 req/s | 163.1 ms | 175.4 ms | 183.3 ms | 0 % |
+| `POST /chat/message` (motor de reglas) | 10 | 4 665 | 582 req/s | 16.4 ms | 24.4 ms | 31.1 ms | 0 % |
+| | 50 | 5 645 | 703 req/s | 71.3 ms | 87.9 ms | 101.1 ms | 0 % |
+| | 100 | 5 421 | 671 req/s | 150.7 ms | 177.2 ms | 201.2 ms | 0 % |
+| `POST /certificates/request` (202 asíncrono) | 10 | 200 | 276 req/s | 31.7 ms | 65.0 ms | 112.3 ms | 0 % |
 
-### 2.4. Comparativa Arquitectónica: Monolito Síncrono Bloqueante vs. Cola Asíncrona `BullMQ` (`HTTP 202 Accepted`)
+Fuente: `qa-audits/performance-k6/load-test-real-results.json`.
 
-Uno de los hallazgos arquitectónicos más relevantes de la auditoría es la validación empírica del patrón **Productor-Consumidor Asíncrono (`BullMQ` + `Redis`)** en la emisión de certificados académicos en PDF:
+![Latencia p95 por endpoint con 50 usuarios](./real_latency_p95_by_endpoint.png)
 
-- En una **Arquitectura Monolítica Síncrona**, la generación de cada certificado requiere ejecutar en el hilo principal de Node.js la matriz vectorial de `QRCode.toDataURL()`, el trazado de tablas y fuentes en `PDFKit`, el cálculo criptográfico `SHA-256` y la escritura en almacenamiento. Bajo ráfagas concurrentes, estas operaciones intensivas en CPU serializan el *Event Loop*, elevando la latencia `p(95)` hasta **`3,420.0 ms`** con `100 VUs` y provocando *timeouts* en cascada sobre los endpoints de notas y matrículas.
-- En **EduDistribuida / USCO-Net**, el endpoint `POST /api/v1/certificates/request` registra el trabajo en estado `QUEUED`, publica el evento en la cola `certificatePdfQueue` y retorna inmediatamente **`HTTP 202 Accepted`** con el `jobId` y el código `USCO-2026-XXXX` en **`12.98 ms` (`p50`)** y **`16.14 ms` (`p95`)** bajo `100 VUs`, logrando una **reducción de latencia de `211.9x`** para el usuario final mientras el microservicio `:4002` (`Async Worker Service`) procesa los documentos PDF en segundo plano.
+![Throughput según usuarios concurrentes](./real_throughput_vs_concurrency.png)
 
-| Concurrencia (`VUs`) | Monolito Síncrono Bloqueante `p(95)` | EduDistribuida Asíncrona `HTTP 202 Accepted p(95)` | Tiempo Medio de Procesamiento Background en Worker (`PDFKit` + `QR` + `SHA-256`) | Factor de Mejora Percibida (`Speedup`) |
-| :---: | :---: | :---: | :---: | :---: |
-| **`10 VUs` Concurrentes** | `420.0 ms` | **`7.37 ms`** (`p50: 5.10 ms`) | `68.0 ms` (Desacoplado en `:4002`) | **`57.0x` más rápido** |
-| **`50 VUs` Concurrentes** | `1,680.0 ms` | **`10.48 ms`** (`p50: 8.38 ms`) | `94.0 ms` (Desacoplado en `:4002`) | **`160.3x` más rápido** |
-| **`100 VUs` Concurrentes** | `3,420.0 ms` *(Saturación Event Loop)* | **`16.14 ms`** (`p50: 12.98 ms`) | `128.0 ms` (Desacoplado en `:4002`) | **`211.9x` más rápido** |
+### 1.3. Interpretación: dónde está el cuello de botella
 
-![Comparativa Arquitectónica: Monolito Síncrono vs Cola Asíncrona BullMQ](./sync_vs_async_queue_bottleneck.png)
-
----
-
-## 3. Auditoría Automatizada de Ciberseguridad OWASP Top 10 (2021 / 2025)
-
-La suite de seguridad (`qa-audits/security-owasp/run-owasp-audit.mjs`, ejecutable mediante `npm run test:security`) verificó de forma automatizada las **10 categorías del estándar OWASP Top 10** ejecutando **22 vectores de ataque y aserciones criptográficas** contra las tuberías Express reales de `core-academic-service` (`:4001`), `async-worker-service` (`:4002`) y `chatbot-ai-service` (`:4003`).
-
-### 3.1. Matriz Completa de Pruebas OWASP Top 10 y Resultados Reales
-
-| Categoría OWASP Top 10 | Caso de Prueba / Vector Auditado | Payload / Estímulo Inyectado | Control Defensivo Activo | HTTP Esperado | HTTP Obtenido | Código de Respuesta / Evidencia | Estado |
-| :--- | :--- | :--- | :--- | :---: | :---: | :--- | :---: |
-| **A01: Broken Access Control** | 1. Acceso no autenticado a perfil institucional | `GET /api/v1/auth/me` *(Sin header `Authorization`)* | `jwtAuthMiddleware` | `401` | **`401`** | `MISSING_AUTH_TOKEN` | ✅ **PASSED** |
-| **A01: Broken Access Control** | 2. Escalada vertical de privilegios (`STUDENT` intentando alterar notas) | `PUT /api/v1/grades` con `Bearer <STUDENT_JWT>` y `{ cut1: 5.0, cut2: 5.0, cut3: 5.0 }` | `rbacMiddleware(['TEACHER', 'ADMIN'])` | `403` | **`403`** | `UNAUTHORIZED_ROLE` | ✅ **PASSED** |
-| **A01: Broken Access Control** | 3. Ataque **IDOR** horizontal en resumen académico | Estudiante `20221203806` invoca `GET /api/v1/students/20231104512/summary` | `studentIdorGuardMiddleware('id')` + RLS | `403` | **`403`** | `IDOR_ACCESS_DENIED` | ✅ **PASSED** |
-| **A01: Broken Access Control** | 4. Ataque **IDOR** horizontal en inscripción de asignaturas | Estudiante `20221203806` invoca `POST /api/v1/enrollments` con `{ studentId: "20231104512" }` | Validación de identidad `req.user` en `/enrollments` | `403` | **`403`** | `IDOR_ENROLLMENT_FORBIDDEN` | ✅ **PASSED** |
-| **A02: Cryptographic Failures** | 5. Adulteración de firma criptográfica en token JWT | `Bearer <JWT_CON_FIRMA_ALTERADA>` en `GET /api/v1/auth/me` | `JwtTokenAdapter.verifyToken` (`HMAC-SHA256`) | `401` | **`401`** | `INVALID_JWT_TOKEN` | ✅ **PASSED** |
-| **A02: Cryptographic Failures** | 6. Ataque de degradación de algoritmo JWT (`alg: "none"`) | `Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0...` | Rechazo estricto en `jsonwebtoken.verify()` | `401` | **`401`** | `INVALID_JWT_TOKEN` | ✅ **PASSED** |
-| **A02: Cryptographic Failures** | 7. Verificación de hashing `Bcrypt` y firma digital `SHA-256` | Hash `$2b$10$...` (`cost=10`) + `generateCertificateSignatureHash` (`64 hex chars`) | `bcryptjs` + `crypto.createHash('sha256')` | `200` | **`200`** | `CRYPTO_VERIFIED` | ✅ **PASSED** |
-| **A03: Injection (SQLi, XSS & Prompt)** | 8. Inyección SQL clásica y destructiva en Login | `POST /api/v1/auth/login` con `email: "' OR '1'='1'; DROP TABLE users; --"` | `payloadSanitizationMiddleware` + `Zod` + `Prisma` | `400` | **`400`** | `MALICIOUS_PAYLOAD_DETECTED` | ✅ **PASSED** |
-| **A03: Injection (SQLi, XSS & Prompt)** | 9. Cross-Site Scripting (`XSS`) en Matrícula Académica | `POST /api/v1/enrollments` con `studentId: "<script>alert(1)</script>"` | `payloadSanitizationMiddleware` + `enrollSchema` | `400` | **`400`** | `MALICIOUS_PAYLOAD_DETECTED` | ✅ **PASSED** |
-| **A03: Injection (SQLi, XSS & Prompt)** | 10. Inyección SQL / Prompt Injection en Chatbot IA (`:4003`) | `POST /api/v1/chat/message` con `"Hola bot ' OR '1'='1'; DROP TABLE users; --"` | `MALICIOUS_INJECTION_REGEX` + `chatMessageSchema` | `400` | **`400`** | `VALIDATION_ERROR_OWASP_A03` | ✅ **PASSED** |
-| **A03: Injection (SQLi, XSS & Prompt)** | 11. Inyección XSS en el Asistente Virtual (`:4003`) | `POST /api/v1/chat/message` con `"Inyectar <script>alert(1)</script>"` | `MALICIOUS_INJECTION_REGEX` + `chatMessageSchema` | `400` | **`400`** | `VALIDATION_ERROR_OWASP_A03` | ✅ **PASSED** |
-| **A04: Insecure Design** | 12. Prevención de sobrecupo en secciones académicas | `occupiedQuota: 25 >= maxQuota: 25` en `ISW-401 (G01-NEI)` | `EnrollmentDomainService` + Prisma `$transaction` | `409` | **`409`** | `QUOTA_EXCEEDED` | ✅ **PASSED** |
-| **A04: Insecure Design** | 13. Prevención de doble matrícula en el mismo periodo (`2026-2`) | Intento de reinscribir `ISW-401` con matrícula `ACTIVE` existente | `EnrollmentDomainService` + Constraint Único DB | `409` | **`409`** | `DUPLICATE_ENROLLMENT` | ✅ **PASSED** |
-| **A05: Security Misconfiguration** | 14. Política de Seguridad de Contenido (`CSP`) | Inspección de cabeceras en `GET /api/v1/health` | `helmet({ contentSecurityPolicy })` | `200` | **`200`** | `default-src 'self'; script-src 'self' 'unsafe-inline'...` | ✅ **PASSED** |
-| **A05: Security Misconfiguration** | 15. Protección Anti-Clickjacking y MIME Sniffing | Inspección de `X-Frame-Options` y `X-Content-Type-Options` | `helmet({ frameguard: { action: 'deny' }, noSniff: true })` | `200` | **`200`** | `nosniff / DENY` | ✅ **PASSED** |
-| **A05: Security Misconfiguration** | 16. Transporte Estricto HTTPS (`HSTS`) y Control `CORS` | Inspección de `Strict-Transport-Security` y `Access-Control-Allow-Origin` | `helmet.hsts({ maxAge: 31536000, preload: true })` | `200` | **`200`** | `max-age=31536000; includeSubDomains; preload` | ✅ **PASSED** |
-| **A06: Vulnerable Components** | 17. Auditoría de dependencias y versiones fijas del monorepo | Inspección de `helmet@^8.0.0`, `zod@^3.23.8`, `bullmq@^5.25.0`, `astro@^5.1.0` | Lockfile determinista `package-lock.json` | `200` | **`200`** | `ZERO_CRITICAL_CVES` | ✅ **PASSED** |
-| **A07: Auth & Identification Failures** | 18. Mitigación de ataque de fuerza bruta en `/api/v1/auth/login` | `9` intentos fallidos consecutivos desde IP `192.168.99.201` en `< 60 s` | `loginRateLimiter` (`max: 8`, ventana `60s`) | `429` | **`429`** | `TOO_MANY_LOGIN_ATTEMPTS` | ✅ **PASSED** |
-| **A08: Software & Data Integrity** | 19. Verificación de integridad de PDF y avalancha `SHA-256` | Validación binaria `%PDF-` (`USCO-2026-8841.pdf`, `3,373 bytes`) + Hash `SHA-256` | `generateCertificateSignatureHash` + QR verificable | `200` | **`200`** | `SHA256_INTEGRITY_VERIFIED` | ✅ **PASSED** |
-| **A09: Logging & Monitoring Failures** | 20. Trazabilidad de auditoría conversacional y telemetría | Registro y consulta en `GET /api/v1/chat/history/:sessionId` y `/api/v1/health` | Modelo `ChatInteractionLog` + Healthchecks | `200` | **`200`** | `AUDIT_LOG_RECORDED` | ✅ **PASSED** |
-| **A10: Server-Side Request Forgery** | 21. Bloqueo de SSRF hacia metadatos cloud AWS/GCP | `{ callbackUrl: "http://169.254.169.254/latest/meta-data/..." }` | Lista blanca estricta de hosts internos USCO-Net | `400` | **`400`** | `SSRF_ORIGIN_BLOCKED` | ✅ **PASSED** |
-| **A10: Server-Side Request Forgery** | 22. Bloqueo de esquema de archivos locales no autorizado | `{ callbackUrl: "file:///etc/passwd" }` | Validación de protocolo (`http:` / `https:`) y host | `400` | **`400`** | `SSRF_ORIGIN_BLOCKED` | ✅ **PASSED** |
+1. **Saturación a partir de ~50 usuarios.** De 50 a 100 usuarios el throughput deja de crecer (p. ej. `/summary`: 741 → 732 req/s) y la latencia se duplica. Es la firma de un servicio ligado a CPU: cada microservicio es **un solo proceso Node** y su *event loop* ya está ocupado al 100 %. Las peticiones adicionales solo hacen cola.
+2. **El costo está en la agregación, no en la red.** `/campuses` (consulta simple) sostiene ~1 300 req/s; `/summary` y `/admin/enrollments`, que unen 5-6 tablas y calculan notas ponderadas en Node, se quedan en 600-740 req/s.
+3. **Cero errores incluso en saturación.** El pool de Prisma y PostgreSQL no se agotaron; el sistema se degrada de forma ordenada (más latencia) en lugar de fallar.
+4. **La cola cumple su función.** La solicitud de certificado responde `202 Accepted` en p50 de 32 ms mientras el worker genera el PDF (≈ 72 ms por documento en promedio según `/metrics/queues`). Durante la auditoría se descubrió que cada certificado se generaba **dos veces** (cola + llamada HTTP de respaldo); tras la corrección, 200 solicitudes producen 200 trabajos.
 
 ---
 
-## 4. Evaluación Heurística de Usabilidad (Jakob Nielsen) y Accesibilidad Web WCAG 2.1 AA
+## 2. Seguridad: OWASP Top 10
 
-El script `qa-audits/usability-heuristics/run-usability-audit.mjs` inspeccionó los **17 archivos de código fuente** de `apps/web-astro/src` (layouts, páginas SSR, islas interactivas en React 19, stores reactivos en Nanostores y hojas de estilo Tailwind CSS).
+### 2.1. Método
 
-### 4.1. Evaluación Detallada de las 10 Heurísticas de Jakob Nielsen
+`qa-audits/security-owasp/run-owasp-blackbox.mjs` inicia sesión con tres roles reales y lanza 29 ataques HTTP contra Core, Worker, Chatbot y portal. Cada caso declara la respuesta que daría un sistema seguro; si alguno falla, el script termina con código 1 y la CI se detiene.
 
-| ID | Heurística de Jakob Nielsen | Puntaje (`/ 5.0`) | Cumplimiento (`%`) | Evidencia Técnica Verificada en `apps/web-astro/src` |
-| :---: | :--- | :---: | :---: | :--- |
-| **H01** | **Visibilidad del estado del sistema** | **`5.0 / 5.0`** | **`100%`** | • Panel de salud en vivo de los 3 microservicios (`:4001`, `:4002`, `:4003`) con latencia en `ms` en `LoginIsland.tsx`.<br>• Indicador permanente de Sede Regional activa (`data-testid="active-campus-indicator"`) en `MainLayout.astro`.<br>• Barra de progreso asíncrona en 3 etapas (`1. QUEUED (202)` → `2. PROCESSING` → `3. COMPLETED`) con *polling* cada `800 ms` en `AsyncCertificateIsland.tsx`.<br>• Badge de motor activo (`GEMINI_AI` / `DETERMINISTIC_RULES`) y latencia en `ms` en cada respuesta de `ChatbotWidget.tsx`. |
-| **H02** | **Relación entre el sistema y el mundo real** | **`5.0 / 5.0`** | **`100%`** | • Lenguaje académico oficial de la Universidad Surcolombiana: ponderación reglamentaria `Corte 1 (30%) + Corte 2 (30%) + Corte 3 (40%)`, `PGA` y nota mínima aprobatoria `3.00`.<br>• Representación de las 4 sedes regionales del Huila (`NEI - Neiva`, `PIT - Pitalito`, `GAR - Garzón`, `LPL - La Plata`). |
-| **H03** | **Control y libertad del usuario** | **`4.9 / 5.0`** | **`98%`** | • Selector en vivo de motor de IA (`Auto Híbrido`, `Gemini`, `Groq`, `Determinista < 5 ms`) en la cabecera de `ChatbotWidget.tsx`.<br>• Selector Rápido de Cuentas Demo en 1 Clic (`Estudiante`, `Docente`, `Administrador`) en `LoginIsland.tsx`.<br>• Botón `#logout-btn` que limpia simultáneamente `localStorage` y cookies HTTP. |
-| **H04** | **Consistencia y estándares** | **`5.0 / 5.0`** | **`100%`** | • Paleta institucional USCO definida en `tailwind.config.mjs` (`usco.wine: #8B1E24`, `usco.gold: #D4AF37`, `usco.slate: #0F172A`).<br>• Tipografía `Inter` para lectura general y `JetBrains Mono` para códigos estudiantiles, notas, hashes `SHA-256` y métricas. |
-| **H05** | **Prevención de errores** | **`5.0 / 5.0`** | **`100%`** | • Deshabilitación automática de botones de inscripción en `CourseEnrollmentIsland.tsx` cuando la asignatura ya está inscrita o el cupo está agotado.<br>• Restricción de rango numérico (`min="0" max="5" step="0.1"`) en el Simulador de Corte 3 (`GradesTableIsland.tsx`) y en la planilla docente (`AdminMultiCampusIsland.tsx`). |
-| **H06** | **Reconocimiento antes que recuerdo** | **`5.0 / 5.0`** | **`100%`** | • Botones de **Consultas Rápidas en 1 Clic** (*Quick Replies*) siempre visibles en `ChatbotWidget.tsx`.<br>• Visualización simultánea de Corte 1, Corte 2, Acumulado (`60%`) y nota mínima requerida en Corte 3 en `GradesTableIsland.tsx`. |
-| **H07** | **Flexibilidad y eficiencia de uso** | **`5.0 / 5.0`** | **`100%`** | • Simulador interactivo dual en `GradesTableIsland.tsx` operable mediante deslizador continuo (`input[type="range"]`) o entrada numérica directa (`input[type="number"]`).<br>• Widget de Chatbot persistente entre navegaciones SSR gracias a `<ClientRouter />` y `transition:persist="chatbot-widget"`.<br>• Sincronización reactiva instantánea entre islas mediante Nanostores (`triggerAcademicSync()`). |
-| **H08** | **Diseño estético y minimalista** | **`4.9 / 5.0`** | **`98%`** | • Interfaz *Dark Glassmorphism* (`.glass-card`) sin ruido visual, organizando el Dashboard Estudiantil en 4 tarjetas KPI superiores (`PGA`, `Créditos`, `Sede Actual`, `Estado Financiero`) y módulos especializados. |
-| **H09** | **Reconocimiento, diagnóstico y recuperación de errores** | **`5.0 / 5.0`** | **`100%`** | • Alertas accesibles (`role="alert"`, `data-testid="login-error-alert"`) con mensajes diagnósticos claros en español institucional.<br>• *Circuit Breaker* automático en el Chatbot que conmuta al motor determinista local (`< 5 ms`) sin interrumpir la experiencia del estudiante. |
-| **H10** | **Ayuda y documentación** | **`5.0 / 5.0`** | **`100%`** | • Enlace directo en la barra de navegación superior hacia la documentación interactiva **Swagger OpenAPI 3.0** (`http://localhost:4001/api/docs`, `data-testid="swagger-docs-link"`).<br>• Árbol de preguntas frecuentes (`/api/v1/chat/faq-tree`) y calendario académico `2026-2` integrados en el asistente virtual. |
-| **TOTAL** | **Promedio Global de Usabilidad (Jakob Nielsen)** | **`4.98 / 5.00`** | **`99.6%`** | **Calificación Sobresaliente — Cumplimiento Integral en las 10 Heurísticas** |
+### 2.2. Resultados antes y después
 
----
+| Categoría | Control verificado | Antes | Después |
+| :--- | :--- | :-: | :-: |
+| A01 | Listado global de matrículas sin token → 401 | ❌ 200 | ✅ |
+| A01 | Listado global con rol STUDENT → 403 | ❌ 200 | ✅ |
+| A01 | Docente solo recibe matrículas de sus grupos | ❌ | ✅ |
+| A01 | Expediente estudiantil sin token → 401 | ❌ 200 | ✅ |
+| A01 | Header interno falsificado → 401 | ❌ 200 | ✅ |
+| A01 | IDOR: estudiante consulta expediente ajeno → 403 | ✅ | ✅ |
+| A01 | Estudiante consulta su propio expediente → 200 | ✅ | ✅ |
+| A01 | STUDENT modifica notas → 403 | ✅ | ✅ |
+| A01 | Docente califica grupo que no dicta → 403 | ❌ 200 | ✅ |
+| A01 | Solicitud de certificado sin token → 401 | ❌ 202 | ✅ |
+| A01 | Estudiante pide certificado de otro → 403 | ❌ 202 | ✅ |
+| A01 | Certificados de otro estudiante sin token → 401 | ❌ 200 | ✅ |
+| A01 | Webhook de pagos sin firma → 401 | ❌ 200 | ✅ |
+| A01 | Webhook con firma HMAC válida es aceptado | ✅ | ✅ |
+| A01 | Chatbot sin sesión → 401 | ❌ 200 | ✅ |
+| A01 | Chatbot ignora `studentId` ajeno | ❌ respondía sobre otra estudiante | ✅ |
+| A01 | Endpoint interno del worker sin token → 401 | ❌ 500 | ✅ |
+| A01 | Portal: cookie falsificada con rol ADMIN | ❌ 500 | ✅ redirige a /login |
+| A02 | JWT firmado con otro secreto → 401 | ❌ 200 | ✅ |
+| A02 | JWT con `alg: none` → 401 | ✅ | ✅ |
+| A02 | Portal: JWT con firma inválida no abre el panel | ❌ 500 | ✅ |
+| A03 | SQLi en login → 400 | ✅ | ✅ |
+| A03 | XSS en chatbot → 400 | ✅ | ✅ |
+| A03 | Path traversal en descarga de PDF → 400 | ✅ | ✅ |
+| A03 | Portal no entrega otro certificado si el pedido no existe → 404 | ❌ 200 | ✅ |
+| A05 | CORS no refleja orígenes no autorizados | ❌ `*` | ✅ |
+| A05 | Cabeceras Helmet (CSP, HSTS, nosniff, frame-options) | ✅ | ✅ |
+| A05 | Errores sin traza interna | ✅ | ✅ |
+| A07 | Rate limit tras intentos fallidos de login → 429 | ✅ | ✅ |
+| | **Total** | **11 / 29** | **29 / 29** |
 
-### 4.2. Auditoría de Accesibilidad Web WCAG 2.1 Nivel AA / AAA
+Informes: `owasp-blackbox-report-before.json` y `owasp-blackbox-report.json` en `qa-audits/security-owasp/`.
 
-#### 4.2.1. Matriz de Contraste Cromático Institucional (Fórmula de Luminancia Relativa W3C)
-
-Se calculó matemáticamente la razón de contraste $(L_1 + 0.05) / (L_2 + 0.05)$ para las 5 combinaciones de color principales de la identidad visual de la Universidad Surcolombiana en el portal:
-
-| Combinación Cromática Auditada | Color Texto (Foreground) | Color Fondo (Background) | Mínimo Exigido WCAG AA | Razón de Contraste Obtenida | Nivel W3C Alcanzado | Uso en la Interfaz `web-astro` |
-| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1. Blanco sobre Slate-950** | `#FFFFFF` | `#020617` | `4.50 : 1` | **`20.14 : 1`** | 🏆 **AAA (Óptimo)** | Títulos principales, tablas de calificaciones y KPIs |
-| **2. Dorado USCO sobre Slate-950** | `#D4AF37` | `#020617` | `4.50 : 1` | **`9.72 : 1`** | 🏆 **AAA (Óptimo)** | Indicadores de sede activa, PGA (`4.52`), códigos y foco |
-| **3. Dorado USCO sobre Glass Slate-900** | `#D4AF37` | `#0F172A` | `4.50 : 1` | **`8.89 : 1`** | 🏆 **AAA (Óptimo)** | Encabezados de islas React, Simulador C3 y Chatbot |
-| **4. Blanco sobre Vinotinto USCO** | `#FFFFFF` | `#8B1E24` | `4.50 : 1` | **`7.34 : 1`** | 🏆 **AAA (Óptimo)** | Botones de acción primaria (`Ingresar`, `Inscribir`, `PDF`) |
-| **5. Slate-950 sobre Dorado USCO** | `#020617` | `#D4AF37` | `4.50 : 1` | **`9.72 : 1`** | 🏆 **AAA (Óptimo)** | Enlace de salto accesible (`Saltar al contenido principal`) |
-
-#### 4.2.2. Verificación Estructural WAI-ARIA y Navegación por Teclado
-
-- **WCAG 2.4.1 (Bypass Blocks):** Implementado en `MainLayout.astro` mediante el enlace `<a href="#main-content" class="sr-only focus:not-sr-only ...">Saltar al contenido principal</a>` vinculado directamente a `<main id="main-content" role="main">`.
-- **WCAG 1.3.1 (Info and Relationships):** Uso riguroso de landmarks semánticos (`<header role="banner">`, `<nav aria-label="Navegación Principal del Sistema">`, `<main id="main-content" role="main">`, `<footer role="contentinfo">`, `<div role="dialog" aria-label="Asistente Virtual Académico USCO-Bot IA">`).
-- **WCAG 2.4.7 (Focus Visible):** Regla global `:focus-visible { @apply outline-2 outline-offset-2 outline-usco-gold; }` en `src/styles/global.css` que garantiza un anillo dorado de alto contraste (`9.72:1`) al navegar con la tecla `Tab`.
-- **Inventario Semántico y de Testabilidad:** Se verificaron **`26` atributos `aria-*`**, **`10` atributos `role`**, **`5` asociaciones explícitas `<label htmlFor="...">`** y **`46` selectores deterministas `data-testid`** distribuidos en las islas y páginas.
-
----
-
-## 5. Plan de Mitigación de Vulnerabilidades y Cuellos de Botella en Sistemas Distribuidos
-
-Con base en los hallazgos de las pruebas de estrés y seguridad, se establecieron y verificaron en código los siguientes mecanismos arquitectónicos de mitigación para garantizar alta disponibilidad durante picos críticos (como el día nacional de matrículas y cierre de notas en las 4 sedes de la USCO):
-
-| # | Riesgo / Cuello de Botella Identificado | Impacto Potencial en Producción | Estrategia Arquitectónica de Mitigación Implementada | Componente / Archivo Responsable |
-| :---: | :--- | :--- | :--- | :--- |
-| **1** | **Bloqueo del *Event Loop* por generación síncrona de PDFs y códigos QR** | Degradación severa (`> 3,400 ms` en `100 VUs`) e indisponibilidad del servicio de matrículas y notas. | **Desacoplamiento Asíncrono con BullMQ + Redis (`HTTP 202 Accepted`):** El Core Service solo persiste el job `QUEUED` y responde en `12.98 ms` (`p50`). El microservicio `:4002` procesa `PDFKit` + `QRCode` + `SHA-256` en background con **idempotencia garantizada** (`processCertificateIdempotent`). | `RequestCertificateAsyncUseCase.ts`<br>`BullMQWorkerConsumer.ts`<br>`PdfCertificateGenerator.ts` |
-| **2** | **Condiciones de Carrera (*Race Conditions*) en cupos de asignaturas de alta demanda** | Sobrecupo en grupos como `ISW-401 (G01-NEI)` cuando decenas de estudiantes se matriculan en el mismo milisegundo. | **Invariantes de Dominio + Transacciones Atómicas ACID (`prisma.$transaction`):** Validación previa en `EnrollmentDomainService.validateEnrollmentEligibility()` seguida de actualización condicional e incremento atómico de `occupiedQuota` dentro de una transacción aislada en PostgreSQL. | `EnrollmentDomainService.ts`<br>`PrismaAcademicRepository.ts` |
-| **3** | **Indisponibilidad, latencia elevada o *Rate Limit* en APIs externas de IA (Gemini / Groq)** | Errores `500/503` o esperas de `> 5 s` en el asistente académico estudiantil. | **Patrón *Strategy* + *Circuit Breaker* con Fallback Determinista (`< 5 ms`):** Si el proveedor LLM falla o supera el umbral de fallos (`failureThreshold = 3`), el circuito se abre y conmuta instantáneamente al `DeterministicRuleEngineAdapter`, manteniendo `100%` de disponibilidad con datos reales de PostgreSQL. | `ProcessAcademicChatUseCase.ts`<br>`DeterministicRuleEngineAdapter.ts` |
-| **4** | **Agotamiento del Pool de Conexiones a PostgreSQL bajo concurrencia multi-servicio** | Rechazo de conexiones (`Too many clients already`) al escalar múltiples instancias de Core, Worker y Chatbot. | **Patrón Singleton Global de `PrismaClient`** en el paquete compartido `@edudistribuida/database` + índices compuestos optimizados en `schema.prisma` sobre `(studentId, periodId)`, `(campusId, isActive)` y `verificationCode`. | `packages/database/src/index.ts`<br>`packages/database/prisma/schema.prisma` |
-| **5** | **Fuga de datos entre sedes regionales o expedientes estudiantiles (Ataques IDOR / Escalada RBAC)** | Un estudiante consulta o altera calificaciones de otro compañero o de otra sede regional. | **Defensa en Profundidad (*Zero-Trust*):** Validación perimetral en `studentIdorGuardMiddleware` + `rbacMiddleware(['TEACHER', 'ADMIN'])` + Políticas **Row-Level Security (RLS)** nativas en PostgreSQL (`init_supabase_rls.sql`) basadas en claims JWT (`role`, `campus_id`, `sub`). | `securityMiddlewares.ts`<br>`init_supabase_rls.sql` |
-| **6** | **Ataques de Fuerza Bruta, Inyección SQL/XSS y Falsificación de Certificados PDF** | Compromiso de cuentas institucionales `@usco.edu.co`, ejecución de scripts maliciosos o adulteración de certificados impresos. | **Rate Limiting Selectivo (`HTTP 429`) + Sanitización Profunda + Firma `SHA-256`:** `loginRateLimiter` bloquea tras 8 intentos fallidos; `payloadSanitizationMiddleware` + `Zod` rechazan payloads SQLi/XSS con `HTTP 400`; cada PDF incluye un sello `SHA-256` verificable por QR. | `securityMiddlewares.ts`<br>`chatRoutes.ts`<br>`packages/database/src/index.ts` |
+**Categorías no cubiertas por pruebas automáticas:** A04 (diseño inseguro) se cubre con reglas de dominio (cupo, doble matrícula, tope de créditos) y transacciones; A06 (componentes vulnerables) requiere `npm audit` periódico; A08 (integridad) con la firma SHA-256 de los PDF; A09 (registro) con `ChatInteractionLog` y logs de servicio; A10 (SSRF) no aplica: ningún endpoint descarga URLs aportadas por el usuario.
 
 ---
 
-## 6. Comandos de Reproducción y Verificación Continua (CI/CD)
+## 3. Usabilidad y accesibilidad
 
-Cualquier evaluador o auditor puede reproducir el 100% de las pruebas y regenerar los reportes JSON y gráficos PNG ejecutando los siguientes comandos desde la raíz del monorepo:
+### 3.1. Evaluación heurística experta (Nielsen)
+
+Se recorrió el portal con los cuatro usuarios del seed en escritorio (1440 px) y móvil (390 px). Severidad en la escala de Nielsen (0 = no es problema, 4 = catástrofe).
+
+| # | Problema | Heurística | Sev. | Estado |
+| :-: | :--- | :--- | :-: | :--- |
+| U1 | El portal mostraba éxito al guardar notas o inscribir aunque el backend lo rechazara | H1 Visibilidad del estado · H9 Recuperación de errores | 4 | Corregido |
+| U2 | El chatbot aparecía en el login y para docentes con notas de otra persona | H2 Relación con el mundo real | 4 | Corregido |
+| U3 | Inscribir materias con un solo clic, sin confirmación | H5 Prevención de errores | 3 | Corregido: confirmación con créditos |
+| U4 | Planilla docente: "Guardar" activo en todas las filas, sin indicar cambios pendientes | H1 · H5 | 3 | Corregido: estado por fila y aviso al salir |
+| U5 | Estado financiero siempre en verde; métricas de colas siempre "Al día" | H1 | 3 | Corregido |
+| U6 | La docente regional no habría visto sus grupos de otras sedes | H1 | 3 | Corregido |
+| U7 | Barra de desarrollo de Astro tapando contenido | H8 Diseño minimalista | 2 | Corregido |
+| U8 | Vista docente con el nombre de la sede repetido 6 veces | H8 | 2 | Corregido |
+| U9 | Oferta de materias mezclada con las ya inscritas; tope de créditos sin contexto | H6 Reconocer antes que recordar | 2 | Corregido |
+| U10 | PGA distinto en el panel (4.04) y en el chatbot (4.46) | H4 Consistencia | 2 | Corregido |
+| U11 | Uso extendido de tipografía monoespaciada y etiquetas en mayúsculas en tarjetas y badges | H8 | 1 | Pendiente |
+| U12 | El periodo "2026-2" está fijo en varias vistas | H2 | 1 | Pendiente |
+
+### 3.2. Accesibilidad automática (axe-core)
+
+`qa-audits/usability-heuristics/run-a11y-axe.mjs` ejecuta axe-core 4.10 (reglas WCAG 2.0/2.1 A y AA) sobre login, panel del estudiante, planilla docente y consolidado admin, en escritorio y móvil.
+
+| Vista | Antes | Después | Causa corregida |
+| :--- | :-: | :-: | :--- |
+| Login, panel estudiante y admin (escritorio) | 2 c/u | 0 | Contraste del logotipo y del pie de página |
+| Planilla docente (móvil) | 12 | 0 | 10 campos de nota sin etiqueta |
+| Consolidado admin (móvil) | 18 | 0 | 16 campos de nota sin etiqueta |
+| **Total (8 vistas)** | **42** | **0** | |
+
+axe-core detecta en torno a un tercio de los problemas de accesibilidad; la navegación por teclado (enlace de salto, foco visible dorado) se revisó manualmente.
+
+---
+
+## 4. Plan de mitigación
+
+| # | Riesgo | Evidencia | Mitigación | Estado |
+| :-: | :--- | :--- | :--- | :--- |
+| 1 | Acceso sin autenticación a datos académicos | 18 controles fallidos en la línea base | JWT + RBAC + anti-IDOR en todos los endpoints de datos; prueba de caja negra en CI | Implementado |
+| 2 | Suplantación entre servicios y webhook falso | Header interno falsificable; webhook abierto | Token interno con comparación en tiempo constante; firma HMAC | Implementado |
+| 3 | Interfaz que oculta fallos | Fallbacks con datos inventados | Errores reales al usuario; "—" cuando no hay dato | Implementado |
+| 4 | Trabajo duplicado en la cola | 200 solicitudes → ~340 PDFs | Respaldo HTTP solo si Redis rechaza | Implementado |
+| 5 | Saturación de CPU por servicio (~50 usuarios) | Throughput plano de 50 a 100 usuarios | Réplicas por servicio tras balanceador (`docker compose --scale` o PM2 cluster); compilar a JS en producción | Recomendado |
+| 6 | Rate limit no compartido entre réplicas | Almacén en memoria de `express-rate-limit` | `rate-limit-redis` sobre el Redis existente | Recomendado |
+| 7 | Robo de token por XSS | JWT en `localStorage` y en props de islas | Cookie `HttpOnly` + portal como BFF | Recomendado |
+| 8 | RLS sin efecto | Prisma usa superusuario | Rol sin `BYPASSRLS` + contexto por transacción | Recomendado |
+| 9 | Certificados descargables por cualquiera con el código | Diseño de verificación por QR | Página de verificación con datos mínimos | Recomendado |
+
+---
+
+## 5. Cómo reproducir
+
+Con PostgreSQL y Redis activos, la base sembrada y los 4 servicios en ejecución:
 
 ```bash
-# 1. Ejecutar la Auditoría Automatizada de Seguridad OWASP Top 10 (10/10 Categorías, 22/22 Aserciones)
 npm run test:security
-
-# 2. Ejecutar el Benchmark de Rendimiento Concurrente (10 -> 50 -> 100 VUs) y regenerar los 3 gráficos PNG
-node qa-audits/performance-k6/run-benchmark-and-charts.mjs
-
-# 3. Ejecutar la Evaluación Heurística de Usabilidad (Nielsen) y Accesibilidad Web (WCAG 2.1 AA/AAA)
-node qa-audits/usability-heuristics/run-usability-audit.mjs
-
-# 4. Ejecutar la prueba de carga distribuida directamente con el binario k6 (cuando el cluster está activo)
-npm run test:k6
 ```
+
+```bash
+npm run test:load
+```
+
+```bash
+npm run test:a11y
+```
+
+```bash
+npm run test:e2e
+```
+
+La auditoría de seguridad termina con la prueba de fuerza bruta, que bloquea el login desde esa IP durante 60 s; ejecútela al final o espere un minuto antes de otras pruebas.

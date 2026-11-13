@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { ZodError, ZodSchema } from 'zod';
@@ -9,6 +10,7 @@ import {
   ValidationError,
 } from '../../../domain/errors/DomainError';
 import { JwtTokenAdapter } from '../../auth/JwtTokenAdapter';
+import { env } from '../../config/env';
 
 declare global {
   namespace Express {
@@ -150,56 +152,91 @@ export function rbacMiddleware(allowedRoles: RoleType[]) {
 }
 
 /**
- * Middleware anti-IDOR (OWASP A01) para endpoints de datos estudiantiles (/students/:id/summary).
- * - Si proviene del servicio interno `x-internal-service: chatbot-ai-service`, permite consulta de contexto.
- * - Si incluye un Bearer Token con rol `STUDENT`, verifica que el estudiante solo pueda consultar su propio `userId` o `studentCode`.
- * - Si un `STUDENT` intenta acceder al expediente de otro estudiante, retorna `403 Forbidden`.
+ * Verifica el token compartido de servicio-a-servicio (`x-internal-service-token`)
+ * con comparación en tiempo constante. Un simple header con el nombre del
+ * servicio NO es una credencial: cualquiera puede enviarlo.
+ */
+export function isTrustedInternalCall(req: Request): boolean {
+  const provided = req.headers['x-internal-service-token'];
+  if (typeof provided !== 'string' || provided.length === 0) return false;
+  const expected = Buffer.from(env.INTERNAL_SERVICE_TOKEN);
+  const received = Buffer.from(provided);
+  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+}
+
+/**
+ * ¿El usuario autenticado es dueño del expediente identificado por `target`?
+ * Acepta UUID, código estudiantil, documento o correo.
+ */
+export function isOwnStudentRecord(user: AuthTokenPayload, target: string): boolean {
+  const clean = target.trim();
+  return (
+    clean === user.userId ||
+    (Boolean(user.studentCode) && clean === user.studentCode) ||
+    clean === user.documentNumber ||
+    clean.toLowerCase() === user.email.toLowerCase()
+  );
+}
+
+/**
+ * Middleware anti-IDOR (OWASP A01) para endpoints de datos estudiantiles.
+ * - Exige siempre autenticación: JWT válido o token interno de servicio.
+ * - Un `STUDENT` solo puede consultar su propio expediente (403 en otro caso).
+ * - `TEACHER` y `ADMIN` pueden consultar expedientes (consulta académica).
  */
 export function studentIdorGuardMiddleware(paramName = 'id') {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const internalHeader = req.headers['x-internal-service'];
-    if (internalHeader === 'chatbot-ai-service') {
+    if (isTrustedInternalCall(req)) {
       next();
       return;
     }
 
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.slice(7).trim();
-        const decodedUser = tokenAdapter.verifyToken(token);
-        req.user = decodedUser;
-
-        const requestedTarget = (req.params[paramName] || '').trim();
-        if (decodedUser.role === 'STUDENT') {
-          const isOwnRecord =
-            requestedTarget === decodedUser.userId ||
-            (decodedUser.studentCode && requestedTarget === decodedUser.studentCode) ||
-            requestedTarget === decodedUser.documentNumber ||
-            requestedTarget.toLowerCase() === decodedUser.email.toLowerCase();
-
-          if (!isOwnRecord) {
-            res.status(403).json({
-              success: false,
-              errorCode: 'IDOR_ACCESS_DENIED',
-              message:
-                'Acceso denegado (OWASP A01 - Prevención IDOR): Un estudiante no está autorizado para consultar el expediente académico de otro estudiante.',
-            });
-            return;
-          }
-        }
-      } catch {
-        res.status(401).json({
+    jwtAuthMiddleware(req, res, () => {
+      const user = req.user!;
+      const requestedTarget = String(req.params[paramName] || '');
+      if (user.role === 'STUDENT' && !isOwnStudentRecord(user, requestedTarget)) {
+        res.status(403).json({
           success: false,
-          errorCode: 'INVALID_JWT_TOKEN',
-          message: 'Token JWT inválido o expirado.',
+          errorCode: 'IDOR_ACCESS_DENIED',
+          message:
+            'Acceso denegado (OWASP A01 - Prevención IDOR): Un estudiante no está autorizado para consultar el expediente académico de otro estudiante.',
         });
         return;
       }
-    }
-
-    next();
+      next();
+    });
   };
+}
+
+/**
+ * Valida la firma HMAC-SHA256 del webhook de pagos (`x-webhook-signature`,
+ * hex del cuerpo JSON). Sin firma válida, nadie puede marcar matrículas como pagadas.
+ */
+export function paymentWebhookSignatureMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const signature = req.headers['x-webhook-signature'];
+  const expected = crypto
+    .createHmac('sha256', env.PAYMENT_WEBHOOK_SECRET)
+    .update(JSON.stringify(req.body ?? {}))
+    .digest('hex');
+
+  const valid =
+    typeof signature === 'string' &&
+    signature.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+
+  if (!valid) {
+    res.status(401).json({
+      success: false,
+      errorCode: 'INVALID_WEBHOOK_SIGNATURE',
+      message: 'Firma del webhook de pagos ausente o inválida.',
+    });
+    return;
+  }
+  next();
 }
 
 export function zodValidationMiddleware<T>(schema: ZodSchema<T>) {

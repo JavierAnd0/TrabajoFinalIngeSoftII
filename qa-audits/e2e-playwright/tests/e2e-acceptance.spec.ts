@@ -37,7 +37,7 @@ test.describe('EduDistribuida USCO-Net — Suite de Aceptación End-to-End (Fase
   }) => {
     await page.goto('/login');
 
-    await expect(page).toHaveTitle(/Iniciar Sesión|USCO-Net/i);
+    await expect(page).toHaveTitle(/Portal Académico USCO/i);
     const demoStudentBtn = page.getByTestId('demo-student-btn');
     const demoTeacherBtn = page.getByTestId('demo-teacher-btn');
     const demoAdminBtn = page.getByTestId('demo-admin-btn');
@@ -78,7 +78,7 @@ test.describe('EduDistribuida USCO-Net — Suite de Aceptación End-to-End (Fase
     await expect(pgaCard).toBeVisible();
     await expect(creditsCard).toBeVisible();
     await expect(campusKpiCard).toContainText(/Neiva/i);
-    await expect(financialCard).toContainText(/MATRÍCULA PAGADA/i);
+    await expect(financialCard).toContainText(/PAZ Y SALVO|PENDIENTE/i);
 
     const gradesTable = page.getByTestId('grades-table');
     await expect(gradesTable).toBeVisible();
@@ -102,7 +102,7 @@ test.describe('EduDistribuida USCO-Net — Suite de Aceptación End-to-End (Fase
     expect(projectedValue).toBeGreaterThanOrEqual(3.0);
   });
 
-  test('E2E-03: Inscripción en 1 clic de una nueva asignatura disponible (ISW-405 o ISW-302) con actualización de cupos y tabla en tiempo real', async ({
+  test('E2E-03: Inscripción con confirmación de una nueva asignatura disponible (ISW-405 o ISW-302) con actualización de cupos y tabla en tiempo real', async ({
     page,
   }) => {
     await authenticateAsDemoStudent(page);
@@ -116,6 +116,8 @@ test.describe('EduDistribuida USCO-Net — Suite de Aceptación End-to-End (Fase
     await expect(targetBtn).toBeVisible();
     await expect(targetBtn).toBeEnabled();
     await targetBtn.click();
+    // Confirmación en dos pasos antes de registrar la matrícula
+    await page.getByTestId(`confirm-enroll-btn-${targetCode}`).click();
 
     const feedbackBanner = page.getByTestId('enrollment-feedback');
     await expect(feedbackBanner).toBeVisible();

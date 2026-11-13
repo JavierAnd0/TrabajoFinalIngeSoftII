@@ -13,8 +13,11 @@ import { BullMQPublisherAdapter } from '../../messaging/BullMQPublisherAdapter';
 import { PrismaAcademicRepository } from '../../persistence/PrismaAcademicRepository';
 import { PrismaUserRepository } from '../../persistence/PrismaUserRepository';
 import {
+  isOwnStudentRecord,
+  isTrustedInternalCall,
   jwtAuthMiddleware,
   loginRateLimiter,
+  paymentWebhookSignatureMiddleware,
   rbacMiddleware,
   studentIdorGuardMiddleware,
   zodValidationMiddleware,
@@ -336,6 +339,7 @@ export function createAcademicRouter(): Router {
           observations: req.body.observations,
           actorRole: req.user!.role,
           actorEmail: req.user!.email,
+          actorUserId: req.user!.userId,
         });
 
         res.status(200).json({
@@ -350,11 +354,20 @@ export function createAcademicRouter(): Router {
   );
 
   // 9. GET /api/v1/admin/enrollments
-  router.get('/admin/enrollments', async (req, res, next) => {
+  // Solo TEACHER y ADMIN. Un docente únicamente recibe las matrículas de sus propios grupos.
+  router.get(
+    '/admin/enrollments',
+    jwtAuthMiddleware,
+    rbacMiddleware(['TEACHER', 'ADMIN']),
+    async (req, res, next) => {
     try {
       const campusCode =
         typeof req.query.campusCode === 'string' ? req.query.campusCode : undefined;
-      const metricsAndEnrollments = await getCampusMetricsUseCase.execute(campusCode);
+      const teacherScope = req.user!.role === 'TEACHER' ? req.user!.userId : undefined;
+      const metricsAndEnrollments = await getCampusMetricsUseCase.execute(
+        campusCode,
+        teacherScope
+      );
 
       const enrichedEnrollments = metricsAndEnrollments.enrollments.map((row) => ({
         id: row.enrollmentId,
@@ -389,15 +402,26 @@ export function createAcademicRouter(): Router {
     } catch (err) {
       next(err);
     }
-  });
+    }
+  );
 
   // 10. POST /api/v1/certificates/request (HTTP 202 Accepted Asíncrono en < 20ms)
   router.post(
     '/certificates/request',
+    (req, res, next) => (isTrustedInternalCall(req) ? next() : jwtAuthMiddleware(req, res, next)),
     zodValidationMiddleware(requestCertificateSchema),
     async (req, res, next) => {
       try {
         const studentIdentifier = (req.body.studentId || req.body.studentCode) as string;
+        if (req.user?.role === 'STUDENT' && !isOwnStudentRecord(req.user, studentIdentifier)) {
+          res.status(403).json({
+            success: false,
+            errorCode: 'IDOR_CERTIFICATE_FORBIDDEN',
+            message:
+              'Acceso denegado (OWASP A01): No puede solicitar certificados a nombre de otro estudiante.',
+          });
+          return;
+        }
         const jobResult = await requestCertificateUseCase.execute({
           studentId: studentIdentifier,
           certificateType: req.body.certificateType,
@@ -457,10 +481,11 @@ export function createAcademicRouter(): Router {
   });
 
   // 13. GET /api/v1/certificates/:jobId
-  router.get('/certificates/:jobId', async (req, res, next) => {
+  router.get('/certificates/:jobId', jwtAuthMiddleware, async (req, res, next) => {
     try {
       const cert = await academicRepository.findByIdOrVerificationCode(req.params.jobId);
-      if (!cert) {
+      // Un estudiante no puede consultar (ni confirmar la existencia de) certificados ajenos.
+      if (!cert || (req.user!.role === 'STUDENT' && cert.studentId !== req.user!.userId)) {
         throw new ResourceNotFoundError('Trabajo de Certificado', req.params.jobId);
       }
       res.status(200).json({
@@ -476,6 +501,7 @@ export function createAcademicRouter(): Router {
   // 14. POST /api/v1/payments/webhook
   router.post(
     '/payments/webhook',
+    paymentWebhookSignatureMiddleware,
     zodValidationMiddleware(paymentWebhookSchema),
     async (req, res, next) => {
       try {

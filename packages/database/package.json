@@ -13,8 +13,8 @@
   },
   "scripts": {
     "generate": "prisma generate && tsc -p tsconfig.json",
-    "db:push": "prisma db push --accept-data-loss",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:push": "node ../../scripts/with-root-env.mjs prisma db push --accept-data-loss",
+    "db:seed": "node ../../scripts/with-root-env.mjs tsx prisma/seed.ts",
     "build": "prisma generate && tsc -p tsconfig.json"
   },
   "dependencies": {

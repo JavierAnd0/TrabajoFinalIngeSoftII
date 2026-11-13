@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
   Edit3,
   Filter,
-  Lock,
+  Users,
+  BookOpen,
   RefreshCw,
   Save,
   Server,
@@ -37,27 +38,27 @@ export default function AdminMultiCampusIsland({
   token,
   userRole,
   userCampusCode = 'NEI',
-  userFullName = 'Ing. Carlos Eduardo Ramírez, M.Sc.',
+  userFullName = '',
   initialCampuses = [],
   initialEnrollments = [],
   initialQueueMetrics = null,
 }: AdminMultiCampusIslandProps) {
   const isTeacherOnly = userRole === 'TEACHER';
-  const lockedCampus = isTeacherOnly ? userCampusCode : 'ALL';
   const CAMPUS_FULL_NAMES: Record<string, string> = {
     NEI: 'Sede Central Neiva',
     PIT: 'Sede Pitalito',
     GAR: 'Sede Garzón',
     LPL: 'Sede La Plata',
   };
-  const campusFullName = CAMPUS_FULL_NAMES[userCampusCode] || 'Sede Central Neiva';
 
   const [campuses, setCampuses] = useState<CampusStatItem[]>(initialCampuses);
   const [enrollments, setEnrollments] = useState<AdminEnrollmentRecord[]>(initialEnrollments);
   const [queueMetrics, setQueueMetrics] = useState<WorkerQueueMetrics | null>(
     initialQueueMetrics
   );
-  const [selectedCampusFilter, setSelectedCampusFilter] = useState<string>(lockedCampus);
+  // El backend ya devuelve al docente solo las matrículas de sus grupos (que pueden estar
+  // en varias sedes): en el cliente no se filtra por sede para los docentes.
+  const [selectedCampusFilter, setSelectedCampusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -66,16 +67,35 @@ export default function AdminMultiCampusIsland({
     null
   );
 
-  // Garantiza que si es DOCENTE siempre esté restringido a su sede asignada
-  // y en pantallas móviles activa por defecto la vista de tarjetas
+  // Últimos valores confirmados por el servidor: permiten saber qué filas tienen cambios sin guardar.
+  const snapshotOf = (rows: AdminEnrollmentRecord[]) =>
+    Object.fromEntries(
+      rows.map((r) => [r.enrollmentId, JSON.stringify([r.cut1, r.cut2, r.cut3, r.observations ?? ''])])
+    );
+  const [savedSnapshot, setSavedSnapshot] = useState<Record<string, string>>(() =>
+    snapshotOf(initialEnrollments)
+  );
+  const isDirty = (row: AdminEnrollmentRecord) =>
+    savedSnapshot[row.enrollmentId] !==
+    JSON.stringify([row.cut1, row.cut2, row.cut3, row.observations ?? '']);
+  const dirtyCount = enrollments.filter(isDirty).length;
+
+  // En pantallas móviles se activa por defecto la vista de tarjetas
   useEffect(() => {
-    if (isTeacherOnly) {
-      setSelectedCampusFilter(userCampusCode);
-    }
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setViewMode('cards');
     }
-  }, [isTeacherOnly, userCampusCode]);
+  }, []);
+
+  // Evita perder notas escritas y no guardadas al cerrar o recargar la página.
+  useEffect(() => {
+    if (dirtyCount === 0) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirtyCount]);
 
   const loadAllAdminData = async () => {
     setLoading(true);
@@ -89,8 +109,11 @@ export default function AdminMultiCampusIsland({
       if (campusesData.status === 'fulfilled' && campusesData.value.length > 0) {
         setCampuses(campusesData.value);
       }
-      if (enrollmentsData.status === 'fulfilled' && enrollmentsData.value.length > 0) {
+      if (enrollmentsData.status === 'fulfilled') {
         setEnrollments(enrollmentsData.value);
+        setSavedSnapshot(snapshotOf(enrollmentsData.value));
+      } else {
+        setFeedback({ type: 'error', text: enrollmentsData.reason?.message || 'No se pudo cargar la planilla.' });
       }
       if (workerData.status === 'fulfilled') {
         setQueueMetrics(workerData.value);
@@ -147,14 +170,6 @@ export default function AdminMultiCampusIsland({
   };
 
   const handleSaveGrade = async (row: AdminEnrollmentRecord) => {
-    if (isTeacherOnly && row.campusCode !== userCampusCode) {
-      setFeedback({
-        type: 'error',
-        text: `Solo puedes modificar notas de los grupos de tu sede.`,
-      });
-      return;
-    }
-
     setFeedback(null);
     setSavingId(row.enrollmentId);
     try {
@@ -167,9 +182,13 @@ export default function AdminMultiCampusIsland({
         token,
       });
 
+      setSavedSnapshot((prev) => ({
+        ...prev,
+        [row.enrollmentId]: JSON.stringify([row.cut1, row.cut2, row.cut3, row.observations ?? '']),
+      }));
       setFeedback({
         type: 'success',
-        text: `Calificación registrada para ${row.studentName} en ${row.courseCode} (${row.campusCode}). Nota actualizada: ${row.finalGrade.toFixed(2)}`,
+        text: `Notas guardadas: ${row.studentName} · ${row.courseCode}. Definitiva actual ${row.finalGrade.toFixed(2)}.`,
       });
     } catch (err: unknown) {
       const msg =
@@ -185,14 +204,22 @@ export default function AdminMultiCampusIsland({
     }
   };
 
-  // Aislamiento de datos:
-  // - Si es TEACHER, solo puede ver su sede asignada (ej. NEI).
-  // - Si es ADMIN, puede filtrar cualquiera de las 4 sedes o ver todas.
-  const effectiveCampusFilter = isTeacherOnly ? userCampusCode : selectedCampusFilter;
+  // Aislamiento de datos: el servidor ya limita al docente a sus grupos;
+  // el ADMIN puede filtrar cualquiera de las 4 sedes o ver todas.
+  const effectiveCampusFilter = isTeacherOnly ? 'ALL' : selectedCampusFilter;
+  const visibleCampuses = campuses;
 
-  const visibleCampuses = isTeacherOnly
-    ? campuses.filter((c) => c.code === userCampusCode)
-    : campuses;
+  // Resumen de los grupos del docente, calculado desde sus propias matrículas.
+  const teacherSummary = useMemo(() => {
+    const groups = new Set(enrollments.map((e) => `${e.courseCode}-${e.groupNumber}`));
+    const students = new Set(enrollments.map((e) => e.studentCode || e.studentName));
+    const closed = enrollments.filter((e) => e.cut3 !== null && e.cut3 !== undefined);
+    const pendingCut3 = enrollments.length - closed.length;
+    const avg = closed.length
+      ? closed.reduce((acc, e) => acc + e.finalGrade, 0) / closed.length
+      : null;
+    return { groups: groups.size, students: students.size, pendingCut3, avg };
+  }, [enrollments]);
 
   const filteredEnrollments = enrollments.filter((e) => {
     const matchesCampus =
@@ -209,30 +236,42 @@ export default function AdminMultiCampusIsland({
 
   return (
     <div className="space-y-6">
-      {/* 1. Sección de Sedes según Jurisdicción del Rol */}
+      {/* 1. Docente: resumen de sus grupos · Admin: sedes regionales */}
+      {isTeacherOnly ? (
+        <section aria-label="Resumen de mis grupos" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { icon: <BookOpen className="w-4 h-4" />, label: 'Grupos a cargo', value: String(teacherSummary.groups) },
+            { icon: <Users className="w-4 h-4" />, label: 'Estudiantes', value: String(teacherSummary.students) },
+            { icon: <Edit3 className="w-4 h-4" />, label: 'Corte 3 por registrar', value: String(teacherSummary.pendingCut3) },
+            {
+              icon: <CheckCircle2 className="w-4 h-4" />,
+              label: 'Promedio de definitivas',
+              value: teacherSummary.avg === null ? '—' : teacherSummary.avg.toFixed(2),
+            },
+          ].map((kpi) => (
+            <div key={kpi.label} className="glass-card rounded-xl p-4 border border-slate-800">
+              <p className="flex items-center gap-1.5 text-xs text-slate-400">
+                <span className="text-usco-gold">{kpi.icon}</span>
+                {kpi.label}
+              </p>
+              <p className="mt-2 text-2xl font-bold text-white tabular-nums">{kpi.value}</p>
+            </div>
+          ))}
+        </section>
+      ) : (
       <section id="sedes" aria-label="Métricas Regionales de Sedes USCO">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Building2 className="w-4 h-4 text-usco-gold" />
-              {isTeacherOnly
-                ? campusFullName
-                : 'Sedes Regionales Universidad Surcolombiana'}
+              Sedes regionales
             </h2>
             <p className="text-xs text-slate-400">
-              {isTeacherOnly
-                ? `Estos son los grupos que tienes asignados este periodo.`
-                : 'Selecciona una sede para filtrar el listado global de estudiantes y asignaturas.'}
+              Selecciona una sede para filtrar la planilla de estudiantes y asignaturas.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {isTeacherOnly ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-usco-wine/25 border border-usco-gold/40 text-xs font-mono text-usco-gold">
-                <Lock className="w-3.5 h-3.5" />
-                <span>{campusFullName}</span>
-              </span>
-            ) : (
-              <button
+            <button
                 type="button"
                 onClick={() => setSelectedCampusFilter('ALL')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
@@ -241,9 +280,8 @@ export default function AdminMultiCampusIsland({
                     : 'bg-[#0D1322] text-slate-300 border-slate-800 hover:bg-slate-800'
                 }`}
               >
-                Todas las Sedes (4)
+                Todas las sedes
               </button>
-            )}
             <button
               type="button"
               onClick={loadAllAdminData}
@@ -314,6 +352,7 @@ export default function AdminMultiCampusIsland({
           })}
         </div>
       </section>
+      )}
 
       {/* 2. Planilla de Calificaciones con Buscador y Selector de Vista (Tabla vs Tarjetas Compactas) */}
       <section
@@ -326,14 +365,18 @@ export default function AdminMultiCampusIsland({
             <div className="flex items-center gap-2">
               <Edit3 className="w-4 h-4 text-usco-gold" />
               <h2 className="text-base sm:text-lg font-bold text-white">
-                {isTeacherOnly
-                  ? `Planilla de notas · ${campusFullName}`
-                  : 'Planilla consolidada de calificaciones'}
+                {isTeacherOnly ? 'Planilla de notas' : 'Planilla consolidada de calificaciones'}
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Edita las notas de Corte 1 (30%), Corte 2 (30%) y Corte 3 (40%) en escala de 0.0 a 5.0.
+              Escala 0.0 a 5.0 · Corte 1 (30 %), Corte 2 (30 %), Corte 3 (40 %). Guarda cada fila al terminar.
             </p>
+            {dirtyCount > 0 && (
+              <p role="status" className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-300">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {dirtyCount === 1 ? '1 fila con cambios sin guardar' : `${dirtyCount} filas con cambios sin guardar`}
+              </p>
+            )}
           </div>
 
           {/* Barra de Herramientas UX: Buscador + Filtro Sede (solo Admin) + Conmutador Vista */}
@@ -367,6 +410,17 @@ export default function AdminMultiCampusIsland({
                   <option value="LPL">Sede Regional La Plata (LPL)</option>
                 </select>
               </div>
+            )}
+
+            {isTeacherOnly && (
+              <button
+                type="button"
+                onClick={loadAllAdminData}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0D1322] hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-medium transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-usco-gold' : ''}`} />
+                <span>Actualizar</span>
+              </button>
             )}
 
             {/* Conmutador de Vista: Tabla Completa vs. Vista Rápida de Tarjetas */}
@@ -422,8 +476,16 @@ export default function AdminMultiCampusIsland({
           </div>
         )}
 
-        {/* MODO 1: TABLA COMPLETA RESPONSIVE */}
-        {viewMode === 'table' ? (
+        {filteredEnrollments.length === 0 ? (
+          <div className="py-10 text-center text-sm text-slate-400 border border-dashed border-slate-800 rounded-lg">
+            {searchQuery
+              ? `Ningún estudiante o asignatura coincide con “${searchQuery}”.`
+              : isTeacherOnly
+                ? 'No tienes matrículas asignadas en este periodo.'
+                : 'No hay matrículas para la sede seleccionada.'}
+          </div>
+        ) : /* MODO 1: TABLA COMPLETA RESPONSIVE */
+        viewMode === 'table' ? (
           <div className="overflow-x-auto rounded-lg border border-slate-800/90">
             <table
               data-testid="admin-grades-editor-table"
@@ -445,8 +507,12 @@ export default function AdminMultiCampusIsland({
                 {filteredEnrollments.map((row) => {
                   const isSaving = savingId === row.enrollmentId;
                   const isPendingC3 = row.cut3 === null || row.cut3 === undefined;
+                  const dirty = isDirty(row);
                   return (
-                    <tr key={row.enrollmentId} className="hover:bg-slate-900/70">
+                    <tr
+                      key={row.enrollmentId}
+                      className={`hover:bg-slate-900/70 ${dirty ? 'bg-amber-950/20 shadow-[inset_3px_0_0_0_rgb(251_191_36)]' : ''}`}
+                    >
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-usco-wine/30 text-usco-gold border border-usco-gold/30">
                           {row.campusCode}
@@ -531,12 +597,16 @@ export default function AdminMultiCampusIsland({
                         <button
                           type="button"
                           data-testid={`save-grade-btn-${row.enrollmentId}`}
-                          disabled={isSaving}
+                          disabled={isSaving || !dirty}
                           onClick={() => handleSaveGrade(row)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/30 text-xs font-semibold transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/30 text-xs font-semibold transition-colors disabled:bg-transparent disabled:text-slate-500 disabled:border-slate-800 disabled:cursor-default"
                         >
-                          <Save className="w-3.5 h-3.5 text-usco-gold" />
-                          <span>{isSaving ? 'Guardando...' : 'Guardar'}</span>
+                          {dirty || isSaving ? (
+                            <Save className="w-3.5 h-3.5 text-usco-gold" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>{isSaving ? 'Guardando…' : dirty ? 'Guardar' : 'Guardado'}</span>
                         </button>
                       </td>
                     </tr>
@@ -551,10 +621,11 @@ export default function AdminMultiCampusIsland({
             {filteredEnrollments.map((row) => {
               const isSaving = savingId === row.enrollmentId;
               const isPendingC3 = row.cut3 === null || row.cut3 === undefined;
+              const dirty = isDirty(row);
               return (
                 <div
                   key={row.enrollmentId}
-                  className="p-4 rounded-xl bg-[#070A12] border border-slate-800 space-y-3"
+                  className={`p-4 rounded-xl bg-[#070A12] border space-y-3 ${dirty ? 'border-amber-500/60' : 'border-slate-800'}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -586,10 +657,14 @@ export default function AdminMultiCampusIsland({
 
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label
+                        htmlFor={`card-c1-${row.enrollmentId}`}
+                        className="block text-[10px] text-slate-400 mb-1"
+                      >
                         Corte 1 (30%)
                       </label>
                       <input
+                        id={`card-c1-${row.enrollmentId}`}
                         type="number"
                         min="0"
                         max="5"
@@ -602,10 +677,14 @@ export default function AdminMultiCampusIsland({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label
+                        htmlFor={`card-c2-${row.enrollmentId}`}
+                        className="block text-[10px] text-slate-400 mb-1"
+                      >
                         Corte 2 (30%)
                       </label>
                       <input
+                        id={`card-c2-${row.enrollmentId}`}
                         type="number"
                         min="0"
                         max="5"
@@ -618,10 +697,14 @@ export default function AdminMultiCampusIsland({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">
+                      <label
+                        htmlFor={`card-c3-${row.enrollmentId}`}
+                        className="block text-[10px] text-slate-400 mb-1"
+                      >
                         Corte 3 (40%)
                       </label>
                       <input
+                        id={`card-c3-${row.enrollmentId}`}
                         type="number"
                         min="0"
                         max="5"
@@ -638,12 +721,12 @@ export default function AdminMultiCampusIsland({
 
                   <button
                     type="button"
-                    disabled={isSaving}
+                    disabled={isSaving || !dirty}
                     onClick={() => handleSaveGrade(row)}
-                    className="w-full py-2 px-3 rounded-lg bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/30 text-xs font-semibold flex items-center justify-center gap-1.5"
+                    className="w-full py-2 px-3 rounded-lg bg-usco-wine hover:bg-usco-wineLight text-white border border-usco-gold/30 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:bg-transparent disabled:text-slate-500 disabled:border-slate-800"
                   >
-                    <Save className="w-3.5 h-3.5 text-usco-gold" />
-                    <span>{isSaving ? 'Guardando calificación...' : 'Guardar Calificación'}</span>
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{isSaving ? 'Guardando…' : dirty ? 'Guardar calificación' : 'Sin cambios'}</span>
                   </button>
                 </div>
               );
@@ -668,10 +751,22 @@ export default function AdminMultiCampusIsland({
               </h2>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono text-emerald-300 bg-emerald-950/70 border border-emerald-800/60 self-start">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            {queueMetrics?.redisConnected !== false ? 'Al día' : 'Con retraso'}
-          </span>
+          {(() => {
+            const down = !queueMetrics || queueMetrics.status === 'unreachable';
+            const degraded = !down && queueMetrics.redisConnected === false;
+            const tone = down
+              ? 'text-red-300 bg-red-950/70 border-red-800/60'
+              : degraded
+                ? 'text-amber-300 bg-amber-950/70 border-amber-800/60'
+                : 'text-emerald-300 bg-emerald-950/70 border-emerald-800/60';
+            const dot = down ? 'bg-red-400' : degraded ? 'bg-amber-400' : 'bg-emerald-400';
+            return (
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] border self-start ${tone}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                {down ? 'Servicio de certificados sin respuesta' : degraded ? 'Cola sin Redis (modo respaldo)' : 'Al día'}
+              </span>
+            );
+          })()}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -700,7 +795,7 @@ export default function AdminMultiCampusIsland({
               <div className="p-2 rounded bg-[#0D1322] border border-slate-800/80">
                 <p className="text-[10px] text-slate-400">Expedidos</p>
                 <p className="font-mono font-semibold text-xs text-emerald-400 mt-0.5">
-                  {queueMetrics?.certificatePdfQueue.completed ?? 2}
+                  {queueMetrics?.certificatePdfQueue.completed ?? 0}
                 </p>
               </div>
               <div className="p-2 rounded bg-[#0D1322] border border-slate-800/80">
@@ -737,7 +832,7 @@ export default function AdminMultiCampusIsland({
               <div className="p-2 rounded bg-[#0D1322] border border-slate-800/80">
                 <p className="text-[10px] text-slate-400">Enviadas</p>
                 <p className="font-mono font-semibold text-xs text-emerald-400 mt-0.5">
-                  {queueMetrics?.notificationQueue.completed ?? 6}
+                  {queueMetrics?.notificationQueue.completed ?? 0}
                 </p>
               </div>
               <div className="p-2 rounded bg-[#0D1322] border border-slate-800/80">

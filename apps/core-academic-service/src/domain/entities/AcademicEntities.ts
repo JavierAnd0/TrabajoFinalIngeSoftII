@@ -36,6 +36,7 @@ export interface SectionValidationTarget {
   courseId: string;
   courseCode: string;
   courseName: string;
+  credits: number;
   periodId: string;
   periodCode: string;
   campusId: string;
@@ -47,6 +48,7 @@ export interface ExistingEnrollmentRecord {
   sectionId: string;
   courseId: string;
   courseCode: string;
+  credits: number;
   periodId: string;
   status: EnrollmentStatusType;
 }

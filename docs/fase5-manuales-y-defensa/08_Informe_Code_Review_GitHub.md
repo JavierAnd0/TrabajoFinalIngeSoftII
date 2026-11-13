@@ -133,3 +133,19 @@ Se implementó la infraestructura completa de gobernanza y automatización conti
 - [x] **Usabilidad y Accesibilidad WCAG 2.1 AA**: **4.98 / 5.00 (99.6%) en Heurísticas de Nielsen** y **5/5 pares de color en nivel AAA**.
 - [x] **Aceptación End-to-End (E2E-01 a E2E-05)**: **5/5 flujos integrales aprobados al 100%**.
 - [x] **Higiene de GitHub**: `.gitignore`, `.github/workflows/ci-quality-gate.yml`, `.github/PULL_REQUEST_TEMPLATE.md` y `.github/CODEOWNERS` operativos y verificados.
+
+---
+
+## 7. Segunda revisión: auditoría integral (13 de noviembre de 2026)
+
+La primera revisión se centró en estructura e higiene. La segunda ejecutó el sistema y encontró defectos que una lectura del código no había revelado. Resumen (detalle en `docs/00_Auditoria_Integral_Proyecto.md`):
+
+| Área | Hallazgo | Acción |
+| :--- | :--- | :--- |
+| Control de acceso | 4 endpoints de datos sin autenticación, header interno falsificable, webhook sin firma, docente sin restricción de grupos | Corregido; 29 controles de caja negra en CI |
+| Portal | Fallbacks que simulaban éxito y datos inventados; cookie de usuario confiada sin verificar el JWT | Eliminados; verificación de firma en el middleware |
+| QA | Auditorías OWASP, rendimiento y usabilidad sobre réplicas en memoria o puntajes fijos | Reemplazadas por pruebas contra el sistema real |
+| Cola | Doble procesamiento de certificados | Corregido |
+| Higiene | `.env` en el historial (solo valores de ejemplo, sin secretos reales); `pnpm-lock.yaml` obsoleto | Verificado; lockfile eliminado |
+
+**Checklist añadido a los PR:** toda prueba de seguridad o rendimiento debe ejecutarse contra los servicios en ejecución, y todo endpoint nuevo debe aparecer en la matriz de acceso de `docs/fase2-plataforma-integrada/`.

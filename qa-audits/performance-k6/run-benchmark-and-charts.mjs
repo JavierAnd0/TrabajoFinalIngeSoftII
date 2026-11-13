@@ -1,4 +1,10 @@
 /**
+ * ⚠️  AVISO (auditoría de noviembre 2026): este benchmark mide servidores Express
+ * SIMULADOS en memoria (sin PostgreSQL ni Redis) y la curva "monolito síncrono" es
+ * un valor modelado, no medido. Sus cifras no deben presentarse como rendimiento
+ * del sistema. La prueba de carga real es run-real-load-test.mjs (npm run test:load).
+ */
+/**
  * ============================================================================
  * EDUDISTRIBUIDA / USCO-NET — BENCHMARK EN VIVO Y GENERADOR DE GRÁFICAS PNG
  * Archivo: qa-audits/performance-k6/run-benchmark-and-charts.mjs

@@ -19,6 +19,8 @@ export const workerEnv = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   SUPABASE_STORAGE_BUCKET:
     process.env.SUPABASE_STORAGE_BUCKET || 'academic-certificates',
+  INTERNAL_SERVICE_TOKEN:
+    process.env.INTERNAL_SERVICE_TOKEN || 'dev-internal-service-token-change-me-0000',
   PUBLIC_CERTIFICATES_DIR: path.resolve(
     __dirname,
     '../../../public/certificates'

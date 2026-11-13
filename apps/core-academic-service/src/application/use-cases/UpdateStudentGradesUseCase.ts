@@ -1,5 +1,5 @@
 import { RoleType } from '../../domain/entities/AcademicEntities';
-import { UnauthorizedRoleError } from '../../domain/errors/DomainError';
+import { ResourceNotFoundError, UnauthorizedRoleError } from '../../domain/errors/DomainError';
 import { GradeDomainService } from '../../domain/services/GradeDomainService';
 import { AdminEnrollmentRecord, IEnrollmentRepository } from '../ports/out/IEnrollmentRepository';
 import { IQueuePublisherPort } from '../ports/out/IQueuePublisherPort';
@@ -12,6 +12,7 @@ export interface UpdateStudentGradesCommand {
   observations?: string | null;
   actorRole: RoleType;
   actorEmail: string;
+  actorUserId: string;
 }
 
 export class UpdateStudentGradesUseCase {
@@ -25,6 +26,21 @@ export class UpdateStudentGradesUseCase {
       throw new UnauthorizedRoleError(
         'Solo los roles TEACHER y ADMIN están autorizados para registrar o modificar calificaciones académicas.'
       );
+    }
+
+    // Un docente solo puede calificar las matrículas de los grupos que dicta (OWASP A01).
+    if (command.actorRole === 'TEACHER') {
+      const sectionTeacherId = await this.enrollmentRepository.findSectionTeacherIdByEnrollment(
+        command.enrollmentId
+      );
+      if (!sectionTeacherId) {
+        throw new ResourceNotFoundError('Matrícula', command.enrollmentId);
+      }
+      if (sectionTeacherId !== command.actorUserId) {
+        throw new UnauthorizedRoleError(
+          'Solo el docente titular del grupo puede registrar o modificar sus calificaciones.'
+        );
+      }
     }
 
     const gradeCalc = GradeDomainService.calculateFinalAndRequiredCut3(

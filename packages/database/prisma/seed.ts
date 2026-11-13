@@ -167,6 +167,22 @@ async function main() {
     },
   });
 
+  // Docente regional: dicta los grupos de Pitalito, Garzón y La Plata. Permite demostrar
+  // que cada docente solo ve y califica sus propios grupos (aislamiento OWASP A01).
+  const regionalTeacherUser = await prisma.user.create({
+    data: {
+      id: '44444444-4444-4444-8444-444444444407',
+      supabaseUid: 'supa-teacher-usco-002',
+      email: 'docente.regional@usco.edu.co',
+      passwordHash,
+      fullName: 'Mg. Laura Patricia Cuéllar',
+      documentNumber: '1075230300',
+      studentCode: null,
+      role: Role.TEACHER,
+      campusId: campusPitalito.id,
+    },
+  });
+
   const alvaroStudent = await prisma.user.create({
     data: {
       id: '44444444-4444-4444-8444-444444444403',
@@ -396,7 +412,7 @@ async function main() {
       maxQuota: 30,
       occupiedQuota: 21,
       courseId: courseISW401.id,
-      teacherId: teacherUser.id,
+      teacherId: regionalTeacherUser.id,
       periodId: period20262.id,
       campusId: campusPitalito.id,
     },
@@ -411,7 +427,7 @@ async function main() {
       maxQuota: 25,
       occupiedQuota: 18,
       courseId: courseISW402.id,
-      teacherId: teacherUser.id,
+      teacherId: regionalTeacherUser.id,
       periodId: period20262.id,
       campusId: campusGarzon.id,
     },
@@ -426,7 +442,7 @@ async function main() {
       maxQuota: 25,
       occupiedQuota: 16,
       courseId: courseISW304.id,
-      teacherId: teacherUser.id,
+      teacherId: regionalTeacherUser.id,
       periodId: period20262.id,
       campusId: campusLaPlata.id,
     },
@@ -636,6 +652,7 @@ async function main() {
   console.log(`   🔑 Contraseña común: ${DEFAULT_DEMO_PASSWORD}`);
   console.log(`   👨‍🎓 Estudiante: ${alvaroStudent.email} | Código: ${alvaroStudent.studentCode} | ID: ${alvaroStudent.id}`);
   console.log(`   👩‍🏫 Docente:    ${teacherUser.email} | ID: ${teacherUser.id}`);
+  console.log(`   👩‍🏫 Docente regional: ${regionalTeacherUser.email} | ID: ${regionalTeacherUser.id}`);
   console.log(`   🏛️ Admin:      ${adminUser.email} | ID: ${adminUser.id}`);
   console.log('================================================================================');
 }

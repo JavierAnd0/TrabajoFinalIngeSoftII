@@ -2,20 +2,25 @@ import jwt from 'jsonwebtoken';
 import { ITokenServicePort } from '../../application/ports/out/ITokenServicePort';
 import { AuthTokenPayload } from '../../domain/entities/AcademicEntities';
 import { InvalidCredentialsError } from '../../domain/errors/DomainError';
-import { env } from '../config/env';
+import { env, JWT_AUDIENCE, JWT_ISSUER } from '../config/env';
 
 export class JwtTokenAdapter implements ITokenServicePort {
   public signToken(payload: AuthTokenPayload): string {
     return jwt.sign(payload, env.SUPABASE_JWT_SECRET, {
+      algorithm: 'HS256',
       expiresIn: '8h',
-      issuer: 'edudistribuida-core-academic-service',
-      audience: 'edudistribuida-usco-net',
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 
   public verifyToken(token: string): AuthTokenPayload {
     try {
-      const decoded = jwt.verify(token, env.SUPABASE_JWT_SECRET) as jwt.JwtPayload &
+      const decoded = jwt.verify(token, env.SUPABASE_JWT_SECRET, {
+        algorithms: ['HS256'],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      }) as jwt.JwtPayload &
         AuthTokenPayload;
 
       if (!decoded || !decoded.userId || !decoded.role) {

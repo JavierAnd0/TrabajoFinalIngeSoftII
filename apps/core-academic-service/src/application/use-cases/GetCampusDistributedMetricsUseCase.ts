@@ -7,10 +7,10 @@ export class GetCampusDistributedMetricsUseCase {
     private readonly enrollmentRepository: IEnrollmentRepository
   ) {}
 
-  public async execute(campusCode?: string) {
+  public async execute(campusCode?: string, teacherId?: string) {
     const [campuses, enrollments] = await Promise.all([
       this.campusRepository.getAllCampusesWithMetrics(),
-      this.enrollmentRepository.listAllEnrollmentsForAdmin(campusCode),
+      this.enrollmentRepository.listAllEnrollmentsForAdmin(campusCode, teacherId),
     ]);
 
     const totalStudents = campuses.reduce((acc, c) => acc + c.totalStudents, 0);

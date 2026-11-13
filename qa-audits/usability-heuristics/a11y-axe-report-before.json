@@ -1,0 +1,145 @@
+{
+  "project": "EduDistribuida / USCO-Net",
+  "type": "Escaneo axe-core WCAG 2.1 A/AA sobre páginas reales",
+  "executedAt": "2026-11-13T03:41:03.675Z",
+  "summary": {
+    "pagesScanned": 8,
+    "totalViolationNodes": 42
+  },
+  "results": [
+    {
+      "page": "Login",
+      "viewport": "escritorio",
+      "url": "/login",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        }
+      ],
+      "passes": 22
+    },
+    {
+      "page": "Panel estudiante",
+      "viewport": "escritorio",
+      "url": "/dashboard/estudiante",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        }
+      ],
+      "passes": 26
+    },
+    {
+      "page": "Planilla docente",
+      "viewport": "escritorio",
+      "url": "/dashboard/admin",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        }
+      ],
+      "passes": 23
+    },
+    {
+      "page": "Consolidado admin",
+      "viewport": "escritorio",
+      "url": "/dashboard/admin",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        }
+      ],
+      "passes": 24
+    },
+    {
+      "page": "Login",
+      "viewport": "móvil",
+      "url": "/login",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        }
+      ],
+      "passes": 23
+    },
+    {
+      "page": "Panel estudiante",
+      "viewport": "móvil",
+      "url": "/dashboard/estudiante",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        }
+      ],
+      "passes": 24
+    },
+    {
+      "page": "Planilla docente",
+      "viewport": "móvil",
+      "url": "/dashboard/admin",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 10,
+          "sample": "input[value=\"4.2\"]"
+        }
+      ],
+      "passes": 21
+    },
+    {
+      "page": "Consolidado admin",
+      "viewport": "móvil",
+      "url": "/dashboard/admin",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": ".font-extrabold"
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 16,
+          "sample": "input[value=\"3.9\"]"
+        }
+      ],
+      "passes": 22
+    }
+  ]
+}

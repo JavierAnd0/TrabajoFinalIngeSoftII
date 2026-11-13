@@ -144,7 +144,7 @@ export class ProcessCertificateJobUseCase {
       jobRecord.digitalSignatureHash ||
       generateCertificateSignatureHash({
         verificationCode: jobRecord.verificationCode,
-        studentCode: student.studentCode || '20221203806',
+        studentCode: student.studentCode || 'N/A',
         documentNumber: student.documentNumber,
         certificateType: jobRecord.certificateType,
         issuedIsoDate: issuedAtIso,
@@ -162,7 +162,7 @@ export class ProcessCertificateJobUseCase {
       student: {
         id: student.id,
         fullName: student.fullName,
-        studentCode: student.studentCode || '20221203806',
+        studentCode: student.studentCode || 'N/A',
         documentNumber: student.documentNumber,
         email: student.email,
         programName: program.name,

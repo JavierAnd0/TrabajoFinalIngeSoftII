@@ -36,12 +36,14 @@ app.use(
 
 app.use(
   cors({
-    origin: '*',
+    // Solo el frontend declarado en CORS_ORIGINS (no '*'): OWASP A05.
+    origin: env.CORS_ORIGINS,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
       'Authorization',
-      'x-internal-service',
+      'x-internal-service-token',
+      'x-webhook-signature',
       'Accept',
     ],
   })

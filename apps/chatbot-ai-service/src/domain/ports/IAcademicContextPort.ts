@@ -53,7 +53,7 @@ export interface IAcademicContextPort {
   /**
    * Obtiene el historial de mensajes de una sesión conversacional desde PostgreSQL.
    */
-  getSessionHistory(sessionId: string): Promise<ChatHistoryEntry[]>;
+  getSessionHistory(sessionId: string, studentId?: string): Promise<ChatHistoryEntry[]>;
 
   /**
    * Devuelve el árbol interactivo de preguntas frecuentes (FAQ Tree) multi-sede USCO.

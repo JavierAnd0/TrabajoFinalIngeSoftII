@@ -90,12 +90,21 @@ export class BullMQPublisherAdapter implements IQueuePublisherPort {
       }
     }
 
-    // Disparo asíncrono garantizado hacia el Worker HTTP para entornos sin Redis o respaldo inmediato
+    // Si la cola aceptó el trabajo, el worker lo consumirá desde Redis. El respaldo HTTP
+    // solo se usa cuando Redis no está disponible; antes se disparaba SIEMPRE y cada
+    // certificado se generaba dos veces (cola + HTTP), anulando el desacople de la cola.
+    if (dispatchedToRedis) {
+      return { dispatchedVia: 'BULLMQ_REDIS' };
+    }
+
     setImmediate(async () => {
       try {
         await fetch(`${env.WORKER_SERVICE_URL}/api/v1/worker/process-certificate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-service-token': env.INTERNAL_SERVICE_TOKEN,
+          },
           body: JSON.stringify(payload),
         });
       } catch (err) {
@@ -106,9 +115,7 @@ export class BullMQPublisherAdapter implements IQueuePublisherPort {
       }
     });
 
-    return {
-      dispatchedVia: dispatchedToRedis ? 'BULLMQ_REDIS' : 'HTTP_ASYNC_FALLBACK',
-    };
+    return { dispatchedVia: 'HTTP_ASYNC_FALLBACK' };
   }
 
   public async publishNotificationEvent(
@@ -130,7 +137,10 @@ export class BullMQPublisherAdapter implements IQueuePublisherPort {
       try {
         await fetch(`${env.WORKER_SERVICE_URL}/api/v1/worker/process-notification`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-service-token': env.INTERNAL_SERVICE_TOKEN,
+          },
           body: JSON.stringify(payload),
         });
       } catch {

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 288" role="img" aria-label="Latencia p95 por endpoint con 50 usuarios concurrentes">
+<style>
+  .bg{fill:#fcfcfb} .t{font:600 15px system-ui,sans-serif;fill:#0b0b0b} .s{font:12px system-ui,sans-serif;fill:#52514e}
+  .lbl{font:12px system-ui,sans-serif;fill:#0b0b0b} .ax{stroke:#d6d5d0;stroke-width:1} .grid{stroke:#ecebe7;stroke-width:1}
+</style>
+  <rect class="bg" width="760" height="288"/>
+  <text class="t" x="24" y="30">Latencia p95 por endpoint · 50 usuarios concurrentes</text>
+  <text class="s" x="24" y="48">Servicios reales (Express + Prisma + PostgreSQL). Menor es mejor.</text>
+  <line class="ax" x1="300" y1="64" x2="300" y2="254"/>
+  <text class="lbl" x="288" y="84" text-anchor="end">GET /campuses (lectura pública)</text>
+  <rect x="300" y="70" width="172.0215433187854" height="22" rx="4" fill="#2a78d6"><title>GET /campuses (lectura pública): p50 37.6 ms · p95 47.5 ms · p99 54.1 ms</title></rect>
+  <text class="lbl" x="480.0215433187854" y="86">47.5 ms</text>
+  <text class="lbl" x="288" y="130" text-anchor="end">GET /students/:id/summary</text>
+  <rect x="300" y="116" width="306.01727179868135" height="22" rx="4" fill="#2a78d6"><title>GET /students/:id/summary: p50 68.3 ms · p95 84.5 ms · p99 92.9 ms</title></rect>
+  <text class="lbl" x="614.0172717986813" y="132">84.5 ms</text>
+  <text class="lbl" x="288" y="176" text-anchor="end">GET /admin/enrollments (admin)</text>
+  <rect x="300" y="162" width="354.5454545454545" height="22" rx="4" fill="#2a78d6"><title>GET /admin/enrollments (admin): p50 85.2 ms · p95 97.9 ms · p99 107.8 ms</title></rect>
+  <text class="lbl" x="662.5454545454545" y="178">97.9 ms</text>
+  <text class="lbl" x="288" y="222" text-anchor="end">POST /chat/message (reglas)</text>
+  <rect x="300" y="208" width="318.3303927941313" height="22" rx="4" fill="#2a78d6"><title>POST /chat/message (reglas): p50 71.3 ms · p95 87.9 ms · p99 101.1 ms</title></rect>
+  <text class="lbl" x="626.3303927941313" y="224">87.9 ms</text>
+</svg>

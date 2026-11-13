@@ -1,0 +1,67 @@
+{
+  "project": "EduDistribuida / USCO-Net",
+  "type": "Escaneo axe-core WCAG 2.1 A/AA sobre páginas reales",
+  "executedAt": "2026-11-13T03:45:40.994Z",
+  "summary": {
+    "pagesScanned": 8,
+    "totalViolationNodes": 0
+  },
+  "results": [
+    {
+      "page": "Login",
+      "viewport": "escritorio",
+      "url": "/login",
+      "violations": [],
+      "passes": 22
+    },
+    {
+      "page": "Panel estudiante",
+      "viewport": "escritorio",
+      "url": "/dashboard/estudiante",
+      "violations": [],
+      "passes": 26
+    },
+    {
+      "page": "Planilla docente",
+      "viewport": "escritorio",
+      "url": "/dashboard/admin",
+      "violations": [],
+      "passes": 23
+    },
+    {
+      "page": "Consolidado admin",
+      "viewport": "escritorio",
+      "url": "/dashboard/admin",
+      "violations": [],
+      "passes": 24
+    },
+    {
+      "page": "Login",
+      "viewport": "móvil",
+      "url": "/login",
+      "violations": [],
+      "passes": 23
+    },
+    {
+      "page": "Panel estudiante",
+      "viewport": "móvil",
+      "url": "/dashboard/estudiante",
+      "violations": [],
+      "passes": 24
+    },
+    {
+      "page": "Planilla docente",
+      "viewport": "móvil",
+      "url": "/dashboard/admin",
+      "violations": [],
+      "passes": 22
+    },
+    {
+      "page": "Consolidado admin",
+      "viewport": "móvil",
+      "url": "/dashboard/admin",
+      "violations": [],
+      "passes": 23
+    }
+  ]
+}

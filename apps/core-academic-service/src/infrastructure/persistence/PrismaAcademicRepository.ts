@@ -243,6 +243,7 @@ export class PrismaAcademicRepository
       occupiedQuota: section.occupiedQuota,
       courseId: section.courseId,
       courseCode: section.course.code,
+      credits: section.course.credits,
       courseName: section.course.name,
       periodId: section.periodId,
       periodCode: section.period.code,
@@ -373,8 +374,11 @@ export class PrismaAcademicRepository
 
     let weightedSum = 0;
     let totalWeightedCredits = 0;
+    // PGA = promedio ponderado por créditos de las materias con nota DEFINITIVA (100 % evaluado).
+    // Antes se incluía el acumulado parcial de materias en curso (p. ej. 2.64 de un máximo de 3.0
+    // al 60 %), lo que hundía el promedio y lo hacía distinto del que calcula el chatbot.
     for (const item of enrollmentsView) {
-      if (item.grade.evaluatedPercentage > 0) {
+      if (item.grade.evaluatedPercentage >= 100) {
         weightedSum += item.grade.accumulatedGrade * item.course.credits;
         totalWeightedCredits += item.course.credits;
       }
@@ -464,6 +468,7 @@ export class PrismaAcademicRepository
       sectionId: enr.sectionId,
       courseId: enr.section.courseId,
       courseCode: enr.section.course.code,
+      credits: enr.section.course.credits,
       periodId: enr.periodId,
       status: enr.status,
     }));
@@ -691,19 +696,28 @@ export class PrismaAcademicRepository
     };
   }
 
+  public async findSectionTeacherIdByEnrollment(enrollmentId: string): Promise<string | null> {
+    if (!UUID_REGEX.test(enrollmentId.trim())) return null;
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { id: enrollmentId.trim() },
+      select: { section: { select: { teacherId: true } } },
+    });
+    return enrollment?.section.teacherId ?? null;
+  }
+
   public async listAllEnrollmentsForAdmin(
-    campusCode?: string
+    campusCode?: string,
+    teacherId?: string
   ): Promise<AdminEnrollmentRecord[]> {
     const normalizedCampusCode = campusCode?.trim().toUpperCase();
 
+    const sectionFilter = {
+      ...(normalizedCampusCode ? { campus: { code: normalizedCampusCode } } : {}),
+      ...(teacherId ? { teacherId } : {}),
+    };
+
     const records = await prisma.enrollment.findMany({
-      where: normalizedCampusCode
-        ? {
-            section: {
-              campus: { code: normalizedCampusCode },
-            },
-          }
-        : undefined,
+      where: Object.keys(sectionFilter).length > 0 ? { section: sectionFilter } : undefined,
       include: {
         student: true,
         section: {

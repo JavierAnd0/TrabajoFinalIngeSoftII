@@ -386,3 +386,33 @@ A continuación se documentan los **5 Architecture Decision Records (ADRs)** fun
 * **Alternativas Descartadas:**  
   1. *Dependencia exclusiva de OpenAI / Gemini sin Fallback:* Descartada porque cualquier corte de red o expiración de clave dejaría inoperativo el módulo de asistencia estudiantil durante la sustentación.
   2. *Chatbot estático de respuestas pregrabadas sin conexión a BD:* Descartado porque no aporta valor real al estudiante al no consultar sus calificaciones, cupos ni certificados verdaderos en PostgreSQL.
+
+---
+
+## 7. Actualización tras la auditoría (noviembre de 2026)
+
+La auditoría integral (`docs/00_Auditoria_Integral_Proyecto.md`) no cambió la descomposición en servicios, pero precisó tres decisiones de arquitectura:
+
+### 7.1. Confianza entre servicios
+
+| Llamada | Credencial | Antes |
+| :--- | :--- | :--- |
+| Navegador → Core / Chatbot | JWT HS256 (`iss`, `aud`, `exp` verificados) | El chatbot no pedía token |
+| Portal Astro (SSR) → Core | JWT del usuario, verificado también por el middleware de Astro | El portal confiaba en una cookie editable |
+| Chatbot → Core (certificados) | `x-internal-service-token` (secreto compartido) | Header `x-internal-service` con un nombre, falsificable |
+| Core → Worker (respaldo HTTP) | `x-internal-service-token` | Sin autenticación |
+| Pasarela de pagos → Core | Firma HMAC-SHA256 del cuerpo | Sin autenticación |
+
+El **chatbot nunca acepta el estudiante desde el cliente**: lo deriva del JWT. Así el contexto que entrega al LLM siempre pertenece a quien pregunta.
+
+### 7.2. Corrección del flujo asíncrono (ADR-02)
+
+El productor publicaba cada certificado en BullMQ **y** además lo enviaba por HTTP al worker, por lo que cada PDF se generaba dos veces. Ahora el respaldo HTTP solo se usa cuando Redis rechaza el trabajo. Esto restablece la semántica del ADR-02: un único consumidor por trabajo, reintentos con backoff exponencial y escalado horizontal de workers sin duplicados.
+
+### 7.3. Persistencia y aislamiento (ADR-03)
+
+El particionamiento lógico por `campusId` se mantiene. Las políticas RLS de `init_supabase_rls.sql` solo surten efecto con un rol de base de datos sin `BYPASSRLS`; con la conexión actual (superusuario `postgres`) el aislamiento lo aplica la capa de aplicación. Se documenta como deuda técnica con su mitigación en el informe de Fase 4.
+
+### 7.4. Escalabilidad medida
+
+La prueba de carga real confirmó que el primer cuello de botella es la **CPU de cada proceso Node** (~50 usuarios concurrentes), no PostgreSQL ni Redis: el throughput se estabiliza mientras la base responde sin errores. Los servicios son *stateless*, por lo que la estrategia del ADR-01 (réplicas tras balanceador) es la indicada; el rate limiter debe pasar a Redis para funcionar entre réplicas.
