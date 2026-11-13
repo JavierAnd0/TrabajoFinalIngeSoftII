@@ -23,6 +23,12 @@ export const openApiSpec = {
         scheme: 'bearer',
         bearerFormat: 'JWT',
       },
+      WebhookSignature: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-webhook-signature',
+        description: 'HMAC-SHA256 en hexadecimal del cuerpo JSON, firmado con PAYMENT_WEBHOOK_SECRET.',
+      },
     },
   },
   paths: {
@@ -175,16 +181,23 @@ export const openApiSpec = {
     '/api/v1/admin/enrollments': {
       get: {
         tags: ['Panel Docente & Administrativo Multi-Sede'],
-        summary: 'Lista todas las matrículas y calificaciones de las 4 sedes USCO',
+        summary: 'Matrículas y calificaciones: ADMIN ve las 4 sedes; TEACHER solo sus grupos',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'campusCode', in: 'query', required: false, schema: { type: 'string', enum: ['NEI', 'PIT', 'GAR', 'LPL'] } },
+        ],
         responses: {
-          '200': { description: 'Listado consolidado de matrículas y notas' },
+          '200': { description: 'Listado de matrículas y notas dentro del alcance del rol' },
+          '401': { description: 'Sin token o token inválido' },
+          '403': { description: 'Rol STUDENT' },
         },
       },
     },
     '/api/v1/certificates/request': {
       post: {
         tags: ['Certificados PDF Asíncronos (BullMQ)'],
-        summary: 'Encola la generación asíncrona de un certificado PDF en BullMQ respondiendo HTTP 202 en <20ms',
+        summary: 'Encola la generación asíncrona de un certificado PDF (HTTP 202). Un STUDENT solo puede pedir los suyos',
+        security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -206,6 +219,8 @@ export const openApiSpec = {
         },
         responses: {
           '202': { description: 'Trabajo de certificado encolado exitosamente (QUEUED)' },
+          '401': { description: 'Sin token o token inválido' },
+          '403': { description: 'Un estudiante intentó pedir el certificado de otro' },
         },
       },
     },
@@ -213,6 +228,7 @@ export const openApiSpec = {
       get: {
         tags: ['Certificados PDF Asíncronos (BullMQ)'],
         summary: 'Consulta el estado y URL de descarga de un certificado por jobId o código USCO-2026-XXXX',
+        security: [{ BearerAuth: [] }],
         parameters: [
           { name: 'jobId', in: 'path', required: true, schema: { type: 'string' } },
         ],
@@ -225,7 +241,8 @@ export const openApiSpec = {
     '/api/v1/certificates/student/{studentId}': {
       get: {
         tags: ['Certificados PDF Asíncronos (BullMQ)'],
-        summary: 'Lista todos los certificados generados o en cola de un estudiante',
+        summary: 'Lista los certificados de un estudiante (un STUDENT solo los propios)',
+        security: [{ BearerAuth: [] }],
         parameters: [
           { name: 'studentId', in: 'path', required: true, schema: { type: 'string' } },
         ],
@@ -237,9 +254,26 @@ export const openApiSpec = {
     '/api/v1/payments/webhook': {
       post: {
         tags: ['Pagos & Liquidación Financiera'],
-        summary: 'Webhook transaccional de confirmación de pago de derechos de matrícula',
+        summary: 'Webhook de la pasarela de pagos: confirma el pago de derechos de matrícula',
+        security: [{ WebhookSignature: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['paymentReference'],
+                properties: {
+                  paymentReference: { type: 'string', example: 'PAG-USCO-2026-001' },
+                  status: { type: 'string', enum: ['PAID', 'PENDING'], example: 'PAID' },
+                },
+              },
+            },
+          },
+        },
         responses: {
           '200': { description: 'Estado financiero actualizado' },
+          '401': { description: 'Firma HMAC ausente o inválida' },
         },
       },
     },

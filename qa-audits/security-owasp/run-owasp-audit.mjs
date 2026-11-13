@@ -1,4 +1,11 @@
 /**
+ * ⚠️  AVISO (auditoría de noviembre 2026): este script NO ataca los servicios reales.
+ * Monta réplicas Express en memoria con rutas reescritas y datos fijos, por lo que
+ * no detectó endpoints sin autenticación del Core real. Se conserva como prueba
+ * unitaria de los middlewares (npm run test:security:unit). La auditoría oficial
+ * de caja negra es run-owasp-blackbox.mjs (npm run test:security).
+ */
+/**
  * ============================================================================
  * EDUDISTRIBUIDA / USCO-NET — AUDITORÍA AUTOMATIZADA DE SEGURIDAD OWASP TOP 10
  * Archivo: qa-audits/security-owasp/run-owasp-audit.mjs

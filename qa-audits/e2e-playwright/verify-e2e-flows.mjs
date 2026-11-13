@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 /**
+ * ⚠️  AVISO (auditoría de noviembre 2026): este runner verifica artefactos compilados y
+ * casos de uso aislados; no navega el portal ni usa la base de datos real. La suite
+ * de aceptación E2E oficial es tests/e2e-acceptance.spec.ts (npm run test:e2e).
+ */
+/**
  * ============================================================================
  * RUNNER DE VERIFICACIÓN INTEGRAL DE ACEPTACIÓN END-TO-END (E2E-01 a E2E-05)
  * Plataforma Distribuida de Gestión Académica Descentralizada — USCO-Net

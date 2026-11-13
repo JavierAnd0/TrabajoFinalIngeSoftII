@@ -146,6 +146,11 @@ En la raíz del proyecto (`/Users/javier/TrabajoFinalIngeSoftII/.env`) se centra
 | `GEMINI_MODEL` | `"gemini-2.5-flash"` | Modelo de lenguaje de Google Gemini utilizado para `Function Calling`. |
 | `GROQ_API_KEY` | `""` | API Key gratuita de Groq Cloud para inferencia ultrarrápida. |
 | `GROQ_MODEL` | `"llama-3.3-70b-versatile"` | Modelo LLaMA 3.3 70B alojado en Groq con soporte de herramientas estructuradas. |
+| `INTERNAL_SERVICE_TOKEN` | `dev-internal-service-token-change-me-0000` | Secreto compartido para llamadas entre servicios (chatbot → core, core → worker), enviado en `x-internal-service-token`. **Obligatorio en producción (≥ 32 caracteres).** |
+| `PAYMENT_WEBHOOK_SECRET` | `dev-payment-webhook-secret-change-me-0000` | Secreto HMAC-SHA256 con el que la pasarela firma `POST /api/v1/payments/webhook` (`x-webhook-signature`). **Obligatorio en producción.** |
+| `CORS_ORIGINS` | `http://localhost:4321,http://127.0.0.1:4321` | Orígenes que el Core acepta por CORS (separados por coma). En producción, el dominio HTTPS del portal. |
+
+> **Secretos en producción.** Con `NODE_ENV=production`, el Core se niega a arrancar si `SUPABASE_JWT_SECRET`, `INTERNAL_SERVICE_TOKEN` o `PAYMENT_WEBHOOK_SECRET` faltan, miden menos de 32 caracteres o conservan el valor de ejemplo. Genérelos con `openssl rand -hex 32`. El portal Astro y el chatbot también necesitan `SUPABASE_JWT_SECRET` para verificar las sesiones.
 
 ---
 
@@ -159,8 +164,10 @@ La totalidad de la infraestructura (**PostgreSQL 15 con RLS**, **Redis 7 AOF**, 
 # 1. Ubicarse en la raíz del monorepo
 cd /Users/javier/TrabajoFinalIngeSoftII
 
-# 2. Verificar que el archivo .env exista (si no existe, copiar desde .env.example)
+# 2. Crear el .env y definir secretos reales (docker compose se detiene si faltan)
 cp -n .env.example .env
+#    Edite .env y reemplace SUPABASE_JWT_SECRET, INTERNAL_SERVICE_TOKEN y
+#    PAYMENT_WEBHOOK_SECRET por valores generados con: openssl rand -hex 32
 
 # 3. Construir las imágenes multi-stage e iniciar los 6 contenedores en segundo plano
 npm run docker:up
@@ -209,7 +216,10 @@ npm run dev:web      # Terminal 4 -> Portal Web Astro SSR  (http://localhost:432
 
 ### 5.1. Aplicación de Políticas Row-Level Security (RLS) Multi-Sede
 
-El archivo [`init_supabase_rls.sql`](file:///Users/javier/TrabajoFinalIngeSoftII/packages/database/sql/init_supabase_rls.sql) implementa el aislamiento criptográfico y relacional por sede (`NEI`, `PIT`, `GAR`, `LPL`) directamente en el motor PostgreSQL:
+El archivo [`init_supabase_rls.sql`](../../packages/database/sql/init_supabase_rls.sql) define el aislamiento por sede (`NEI`, `PIT`, `GAR`, `LPL`) en el motor PostgreSQL:
+
+> **Importante (auditoría de noviembre 2026).** Las políticas RLS solo se aplican a roles de base de datos sin privilegio `BYPASSRLS`. Prisma se conecta como `postgres` (superusuario), por lo que hoy **no** filtran las consultas de los servicios; el aislamiento efectivo lo hacen los middlewares JWT/RBAC/anti-IDOR del Core. Para que RLS actúe, cree un rol de aplicación sin `BYPASSRLS` y úselo en `DATABASE_URL`.
+
 
 - **Funciones de extracción de Claims JWT:** `public.jwt_user_role()`, `public.jwt_user_campus_id()` y `public.jwt_supabase_uid()`.
 - **Políticas RLS por Tabla:**
@@ -230,9 +240,10 @@ psql "$DIRECT_URL" -f packages/database/sql/init_supabase_rls.sql
 
 El comando `npm run db:seed` ejecuta [`seed.ts`](file:///Users/javier/TrabajoFinalIngeSoftII/packages/database/prisma/seed.ts), el cual es **100% idempotente** y crea:
 - **4 Sedes Regionales USCO:** Neiva (`NEI`), Pitalito (`PIT`), Garzón (`GAR`) y La Plata (`LPL`).
-- **6 Usuarios Institucionales con contraseña `Usco2026*`:**
+- **7 usuarios institucionales con contraseña `Usco2026*`:**
   - `alvaro.andrade@usco.edu.co` (`STUDENT`, Código `20221203806`, Sede Neiva).
-  - `docente.software@usco.edu.co` (`TEACHER`, Ing. Carlos Eduardo Ramírez, Sede Neiva).
+  - `docente.software@usco.edu.co` (`TEACHER`, Ing. Carlos Eduardo Ramírez, grupos de Neiva).
+  - `docente.regional@usco.edu.co` (`TEACHER`, Mg. Laura Patricia Cuéllar, grupos de Pitalito, Garzón y La Plata).
   - `admin@usco.edu.co` (`ADMIN`, Dra. María Fernanda Perdomo, Registro y Control Multi-Sede).
   - Estudiantes regionales en Pitalito, Garzón y La Plata.
 - **6 Cursos de Ingeniería de Software y 9 Secciones Abiertas** para el periodo `2026-2`.
@@ -242,29 +253,25 @@ El comando `npm run db:seed` ejecuta [`seed.ts`](file:///Users/javier/TrabajoFin
 
 ## 6. Ejecución de Suites de Pruebas y Auditoría de Calidad
 
-El proyecto cuenta con **4 suites de validación automatizadas** ubicadas en `qa-audits/`:
+Todas las suites oficiales prueban el **sistema real**: requieren PostgreSQL y Redis activos, la base sembrada y los 4 servicios en ejecución.
 
-```bash
-# 1. Auditoría Automatizada de Seguridad OWASP Top 10:2021 (A01, A02, A03, A05, A07)
-npm run test:security
-# Reporte generado: qa-audits/security-owasp/owasp-audit-report.json
+| Suite | Comando | Informe |
+| :--- | :--- | :--- |
+| Aceptación E2E (Playwright, 5 flujos) | `npm run test:e2e` | `qa-audits/e2e-playwright/playwright-report/` |
+| Seguridad OWASP de caja negra (29 controles) | `npm run test:security` | `qa-audits/security-owasp/owasp-blackbox-report.json` |
+| Carga y estrés (10 → 50 → 100 usuarios) | `npm run test:load` | `qa-audits/performance-k6/load-test-real-results.json` + gráficos en `docs/fase4-informe-calidad/` |
+| Accesibilidad WCAG 2.1 A/AA (axe-core) | `npm run test:a11y` | `qa-audits/usability-heuristics/a11y-axe-report.json` |
+| k6 (si está instalado) | `npm run test:k6` | salida de k6 |
 
-# 2. Auditoría Automatizada de Usabilidad (10 Heurísticas de Nielsen + WCAG 2.1 AA)
-node qa-audits/usability-heuristics/run-usability-audit.mjs
-# Reporte generado: qa-audits/usability-heuristics/usability-audit-report.json
+Orden recomendado: E2E → carga → accesibilidad → seguridad. La auditoría de seguridad termina con una prueba de fuerza bruta que bloquea el login desde esa IP durante 60 s.
 
-# 3. Verificación Integral de los 5 Flujos de Aceptación End-to-End (E2E-01 a E2E-05)
-node qa-audits/e2e-playwright/verify-e2e-flows.mjs
-# Reporte generado: qa-audits/e2e-playwright/e2e-verification-report.json
+Si su Chromium no coincide con la versión de Playwright del proyecto, `run-a11y-axe.mjs` acepta `PW_CHROMIUM_PATH=/ruta/a/chromium`.
 
-# 4. Ejecución de Playwright E2E con Navegador Chromium Real (con el clúster activo)
-npm run test:e2e
+> Los scripts `run-owasp-audit.mjs`, `run-benchmark-and-charts.mjs`, `run-usability-audit.mjs` y `verify-e2e-flows.mjs` trabajan sobre réplicas en memoria o artefactos compilados. Se conservan como pruebas unitarias (`npm run test:security:unit`) y **no** deben citarse como métricas del sistema.
 
-# 5. Pruebas de Carga, Estrés y Concurrencia ACID con Grafana k6
-npm run test:k6
-# Alternativa determinista en Node.js:
-node qa-audits/performance-k6/run-benchmark-verification.mjs
-```
+### 6.1. Integración continua
+
+`.github/workflows/ci-quality-gate.yml` ejecuta en cada push: (1) compilación y verificación de pureza hexagonal; (2) un job que levanta PostgreSQL 16 y Redis 7 como servicios, siembra la base, arranca los 4 servicios y corre E2E + OWASP de caja negra; (3) la revisión estática de accesibilidad.
 
 ---
 

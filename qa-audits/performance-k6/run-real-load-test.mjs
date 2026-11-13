@@ -113,11 +113,13 @@ function lineChartRps(rows) {
   const names = [...new Set(rows.map((r) => r.scenario))];
   const colors = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'];
   const W = 760, H = 380, left = 64, right = 210, top = 64, bottom = 48;
-  const maxRps = Math.max(...rows.map((r) => r.rps)) * 1.1;
+  const rawMax = Math.max(...rows.map((r) => r.rps));
+  const step = rawMax <= 1000 ? 250 : 500;
+  const maxRps = Math.ceil((rawMax * 1.05) / step) * step;
   const levels = CONCURRENCY_LEVELS;
   const x = (c) => left + (levels.indexOf(c) / Math.max(1, levels.length - 1)) * (W - left - right);
   const y = (v) => H - bottom - (v / maxRps) * (H - top - bottom);
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxRps * f));
+  const ticks = Array.from({ length: maxRps / step + 1 }, (_, i) => i * step);
   const grid = ticks
     .map((t) => `<line class="grid" x1="${left}" x2="${W - right}" y1="${y(t)}" y2="${y(t)}"/><text class="s" x="${left - 8}" y="${y(t) + 4}" text-anchor="end">${t}</text>`)
     .join('');
@@ -144,7 +146,20 @@ ${SVG_STYLE}
 </svg>\n`;
 }
 
+async function writeCharts(rows) {
+  const docsDir = path.join(ROOT, 'docs/fase4-informe-calidad');
+  await fs.writeFile(path.join(docsDir, 'real_latency_p95_by_endpoint.svg'), barChartP95(rows, 50));
+  await fs.writeFile(path.join(docsDir, 'real_throughput_vs_concurrency.svg'), lineChartRps(rows));
+}
+
 async function main() {
+  // --charts-only: regenera los gráficos desde el último JSON sin volver a cargar los servicios.
+  if (process.argv.includes('--charts-only')) {
+    const saved = JSON.parse(await fs.readFile(path.join(__dirname, 'load-test-real-results.json'), 'utf-8'));
+    await writeCharts(saved.results);
+    console.log('Gráficos regenerados en docs/fase4-informe-calidad/');
+    return;
+  }
   const student = await login('alvaro.andrade@usco.edu.co');
   const admin = await login('admin@usco.edu.co');
   const auth = (t) => ({ Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' });
@@ -198,9 +213,7 @@ async function main() {
     results: rows,
   };
   await fs.writeFile(path.join(__dirname, 'load-test-real-results.json'), `${JSON.stringify(report, null, 2)}\n`);
-  const docsDir = path.join(ROOT, 'docs/fase4-informe-calidad');
-  await fs.writeFile(path.join(docsDir, 'real_latency_p95_by_endpoint.svg'), barChartP95(rows, 50));
-  await fs.writeFile(path.join(docsDir, 'real_throughput_vs_concurrency.svg'), lineChartRps(rows));
+  await writeCharts(rows);
   console.log('\nResultados: qa-audits/performance-k6/load-test-real-results.json · gráficos SVG en docs/fase4-informe-calidad/');
 }
 

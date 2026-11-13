@@ -63,16 +63,15 @@
   - **Particionamiento del Teorema CAP por Caso de Uso:**
     - **Subsistema CP (Consistencia Fuerte + Tolerancia a Particiones):** Inscripción de cupos (`POST /api/v1/enrollments`) y registro de notas (`PUT /api/v1/grades`). Utiliza transacciones interactivas Prisma con bloqueo condicional atómico (`occupied_quota < max_quota`) y restricción SQL `CHECK`.
     - **Subsistema AP (Alta Disponibilidad + Consistencia Eventual):** Expedición de certificados PDF (`POST /api/v1/certificates/request`) y notificaciones académicas.
-  - **Gobierno Descentralizado Multi-Sede con Supabase RLS:**
-    - Políticas en motor PostgreSQL (`init_supabase_rls.sql`) que filtran filas automáticamente según el claim `campusId` (`NEI`, `PIT`, `GAR`, `LPL`) y el rol (`STUDENT`, `TEACHER`, `ADMIN`).
-- **Visualización Recomendada:** Diagrama de secuencia de la transacción atómica ante 50 hilos concurrentes intentando tomar el último cupo (`1 HTTP 201` vs. `49 HTTP 409 Conflict`).
+  - **Aislamiento multi-sede:** lo garantiza la capa de aplicación (JWT + RBAC + anti-IDOR; el docente solo ve sus grupos). Las políticas RLS de `init_supabase_rls.sql` están diseñadas pero no activas, porque Prisma usa un superusuario (ver plan de mitigación).
+- **Visualización Recomendada:** Diagrama de secuencia de la transacción con `UPDATE … WHERE occupied_quota < max_quota` y el resultado medido: 4 estudiantes simultáneos por 1 cupo → `1 × 201` y `3 × 409`, cupo final `13/13`.
 - **Notas del Orador:** *"Un sistema distribuido maduro no aplica la misma regla CAP a todo: en matrículas priorizamos Consistencia Fuerte (CP) para garantizar cero sobrecupos, mientras que en certificados priorizamos Disponibilidad (AP) con consistencia eventual."*
 
 ---
 
 ### Diapositiva 6: Procesamiento Asíncrono con Redis + BullMQ y Certificados Criptográficos PDF
 - **Contenido Técnico en Pantalla:**
-  - **Flujo No Bloqueante (`HTTP 202 Accepted` en `< 20 ms`):**
+  - **Flujo No Bloqueante (`HTTP 202 Accepted`, p50 medido de 32 ms):**
     1. `core-academic-service` registra el `CertificateJob` en estado `QUEUED` y publica el evento en `certificatePdfQueue`.
     2. `async-worker-service` consume el trabajo en segundo plano (`PROCESSING`), calcula el hash `SHA-256` canónico y genera el código QR de verificación institucional.
     3. `PDFKit` construye el documento oficial con la tabla ponderada 30/30/40 y actualiza el estado a `COMPLETED`.
@@ -102,47 +101,39 @@
 
 ---
 
-### Diapositiva 9: Mantenimiento y Pruebas de Software — Rendimiento y Concurrencia (`k6`)
-- **Contenido Técnico en Pantalla:**
-  - **Resultados Cuantitativos de los 3 Escenarios de Carga:**
-    - **Escenario A (Lectura Concurrente Dashboard + Notas):** `p95 = 2.58 ms` (Umbral SLA `< 250 ms` → **CUMPLE**).
-    - **Escenario B (Desacoplamiento Asíncrono Certificados HTTP 202):** `p95 = 4.49 ms` (Umbral SLA `< 50 ms` → **CUMPLE**).
-    - **Escenario C (50 Hilos Concurrentes por 1 Último Cupo):** `1 Inscripción Exitosa (HTTP 201)` y `49 Rechazos Controlados (HTTP 409)` → **0 Sobrecupos (`occupied_quota = 30/30`)**.
-- **Visualización Recomendada:** Tabla comparativa Síncrono vs. Asíncrono y gráfica de latencias `p50 / p95 / p99`.
-- **Notas del Orador:** *"En Mantenimiento y Pruebas sometimos la plataforma a un ataque de carrera de 50 hilos simultáneos disputando un único cupo disponible. El resultado fue matemáticamente exacto: 1 matrícula aprobada, 49 rechazos controlados y cero corrupción de datos."*
+### Diapositiva 9: Pruebas de rendimiento sobre el sistema real
+- **Contenido en pantalla:**
+  - Prueba de carga de 10 → 50 → 100 usuarios concurrentes contra los servicios reales (Express + Prisma + PostgreSQL): **0 % de errores** en todas las etapas.
+  - Con 50 usuarios: p95 de 47 ms (`/campuses`), 85 ms (`/summary`), 98 ms (`/admin/enrollments`) y 88 ms (chatbot).
+  - **Cuello de botella identificado:** el throughput se aplana desde ~50 usuarios porque cada servicio es un solo proceso Node (CPU al 100 %). Mitigación: réplicas tras balanceador.
+  - Solicitud de certificado: `202 Accepted` en p50 32 ms mientras el worker genera el PDF en segundo plano.
+- **Visualización:** gráficos `real_throughput_vs_concurrency.png` y `real_latency_p95_by_endpoint.png`.
+- **Notas del orador:** *"No reportamos cifras de laboratorio: todas las peticiones atravesaron la base de datos real. Lo más valioso fue encontrar dónde se satura el sistema y por qué."*
 
 ---
 
-### Diapositiva 10: Auditoría de Seguridad OWASP Top 10:2021 y Heurísticas de Usabilidad
-- **Contenido Técnico en Pantalla:**
-  - **100% de Cumplimiento en Auditoría Automatizada OWASP Top 10 (9/9 Vectores Mitigados):**
-    - `A01 Broken Access Control`: Bloqueo anti-IDOR (`403 Forbidden`) cuando un estudiante intenta leer notas o certificados de otro UUID, y RBAC estricto en `PUT /api/v1/grades`.
-    - `A02 Cryptographic Failures`: Contraseñas con `bcryptjs` (factor 10), JWT firmado `HS256` y certificados PDF con hash `SHA-256`.
-    - `A03 Injection`: Sanitización recursiva y validación estricta `Zod` contra SQLi (`' OR 1=1 --`) y XSS (`<script>`).
-    - `A05 & A07`: Cabeceras `Helmet` (`CSP`, `HSTS`, `X-Frame-Options: DENY`) y `Rate Limiting` contra fuerza bruta.
-  - **Usabilidad y Accesibilidad:** `98.5 / 100` en las 10 Heurísticas de Jakob Nielsen y contraste **WCAG 2.1 AA**.
-- **Visualización Recomendada:** Matriz de vectores de ataque OWASP probados vs. códigos HTTP de rechazo seguro (`400`, `401`, `403`, `429`).
-- **Notas del Orador:** *"No nos limitamos a declarar que el sistema es seguro: programamos un script de auditoría ofensiva que lanza inyecciones SQL, payloads XSS, tokens adulterados y ataques IDOR contra los endpoints, logrando un 100% de bloqueo efectivo."*
+### Diapositiva 10: Seguridad OWASP y usabilidad
+- **Contenido en pantalla:**
+  - Auditoría de caja negra con 29 ataques reales (sin token, token falsificado, `alg: none`, IDOR, header interno falso, webhook sin firma, cookie adulterada, SQLi, XSS, path traversal, CORS, fuerza bruta).
+  - **Antes de la auditoría: 11/29. Después: 29/29.** La versión anterior del script atacaba una réplica en memoria y no veía que el listado de notas era público.
+  - Accesibilidad axe-core WCAG 2.1 A/AA: **42 → 0** nodos con violaciones.
+  - Evaluación heurística de Nielsen con 12 hallazgos y su severidad (10 corregidos).
+- **Notas del orador:** *"La lección de calidad más importante del proyecto: una prueba que no golpea el sistema real da una falsa sensación de seguridad. Por eso nuestras pruebas ahora corren en la CI contra PostgreSQL, Redis y los cuatro servicios."*
 
 ---
 
-### Diapositiva 11: Validación End-to-End con Playwright y Contenerización DevOps
-- **Contenido Técnico en Pantalla:**
-  - **5 Flujos Críticos de Aceptación Verificados (`E2E-01` a `E2E-05`):**
-    - `E2E-01`: Login en 1 clic y emisión de sesión JWT (`PASSED`).
-    - `E2E-02`: Dashboard Multi-Sede, tabla 30/30/40 y simulador de Corte 3 (`PASSED`).
-    - `E2E-03`: Inscripción transaccional de `ISW-405` con actualización reactiva de cupos (`PASSED`).
-    - `E2E-04`: Consulta de notas, simulación y certificado desde `USCO-Bot IA` (`PASSED`).
-    - `E2E-05`: Ciclo asíncrono `QUEUED` → `PROCESSING` → `COMPLETED` y descarga de PDF válido (`PASSED`).
-  - **Contenerización Multi-Stage (`node:20-alpine`):** Orquestación completa con `docker compose up --build -d` y `healthcheck`s reales en los 6 contenedores.
-- **Visualización Recomendada:** Captura del reporte de ejecución E2E al 100% y topología de contenedores en `docker-compose.yml`.
-- **Notas del Orador:** *"Cada componente cuenta con su Dockerfile multi-stage optimizado sobre Alpine Linux y está validado de extremo a extremo mediante nuestra suite automatizada en Playwright."*
+### Diapositiva 11: Validación End-to-End y contenerización
+- **Contenido en pantalla:**
+  - 5 flujos de aceptación en Playwright contra el sistema real (5/5): login, panel con simulador, inscripción con confirmación, chatbot con tabla de notas y certificado, ciclo asíncrono del PDF.
+  - Docker Compose con 6 contenedores y `healthcheck`; el compose exige secretos reales y el portal usa las URLs internas de la red Docker.
+  - CI en GitHub Actions: build + pureza hexagonal → sistema real (E2E + OWASP) → accesibilidad.
+- **Notas del orador:** *"Cada push levanta la plataforma completa y la ataca; si un control de seguridad falla, el build no pasa."*
 
 ---
 
 ### Diapositiva 12: Conclusiones Técnicas y Demostración en Vivo
 - **Contenido Técnico en Pantalla:**
-  - Cumplimiento del **100% de los objetivos** de las tres asignaturas integradas.
+  - Las 5 fases del enunciado entregadas y verificadas contra el sistema en ejecución.
   - Desacoplamiento real, tolerancia a fallos demostrable y calidad verificada mediante pruebas automatizadas reproducibles.
   - Paso a la **Demostración en Vivo (5 Minutos)**.
 - **Notas del Orador:** *"Con esto concluimos la exposición teórica y arquitectónica, e invitamos al jurado a observar la demostración en vivo de los cinco flujos sobre la plataforma."*
@@ -154,10 +145,10 @@
 | Minuto | Acción en Pantalla | Qué Destacar ante el Jurado |
 | :---: | :--- | :--- |
 | **00:00 – 01:00** | **1. Portal `/login` y Salud del Clúster:** Mostrar el panel de estado en vivo de los 3 microservicios (`:4001`, `:4002`, `:4003`) y los 4 nodos regionales (`NEI`, `PIT`, `GAR`, `LPL`). Hacer clic en **"Estudiante Ingeniería de Software (Álvaro Javier Andrade)"** y pulsar **Ingresar**. | Destacar la facilidad de uso (Heurística de Nielsen: 1 clic sin recordar contraseñas en la demo) y la emisión de un JWT real con claims de sede y rol. |
-| **01:00 – 02:00** | **2. Dashboard Estudiantil y Simulador de Corte 3:** Mostrar el PGA (`4.52`), las 4 materias inscritas y señalar `ISW-403 (Mantenimiento y Pruebas)` con Corte 3 pendiente. Mover el deslizador del **Simulador de Corte 3** a `4.5`. | Explicar cómo el dominio calcula en tiempo real la ponderación oficial USCO (`30% + 30% + 40%`), indicando que necesita `1.35` para aprobar en `3.00` y que con `4.5` cerraría en `4.26`. |
-| **02:00 – 03:00** | **3. Inscripción Transaccional ACID (`ISW-405`):** Bajar a la sección de Oferta Académica, mostrar que `ISW-405 Inteligencia Artificial` tiene `15 / 25` cupos ocupados y hacer clic en **"Inscribir Asignatura (ISW-405)"**. | Hacer notar cómo los cupos suben instantáneamente a `16 / 25`, la materia aparece en la tabla superior y los créditos suben de `13` a `16` sin recargar la página. |
+| **01:00 – 02:00** | **2. Dashboard Estudiantil y Simulador de Corte 3:** Mostrar el PGA (`4.46`), las 4 materias inscritas y señalar `ISW-403 (Mantenimiento y Pruebas)` con Corte 3 pendiente. Mover el deslizador del **Simulador de Corte 3** a `4.5`. | Explicar cómo el dominio calcula en tiempo real la ponderación oficial USCO (`30% + 30% + 40%`), indicando que necesita `0.90` para aprobar en `3.00` y que con `4.5` cerraría en `4.44`. |
+| **02:00 – 03:00** | **3. Inscripción Transaccional ACID (`ISW-405`):** Bajar a la sección de Oferta Académica, mostrar que `ISW-405 Inteligencia Artificial` tiene `15 / 25` cupos ocupados, pulsar **"Inscribir ISW-405"** y luego **"Confirmar · 3 créditos"**. | Hacer notar la confirmación en dos pasos, los cupos en `16 / 25`, la materia en la tabla y "Te quedan 5 créditos". |
 | **03:00 – 04:00** | **4. Cola Asíncrona `BullMQ` y Certificado PDF con QR:** En la tarjeta de certificados, hacer clic en **"Generar Certificado Oficial en PDF"**. Mostrar la transición `QUEUED` → `PROCESSING` → `COMPLETED` y abrir el PDF descargado. | Mostrar el PDF oficial generado con los colores de la USCO, la tabla actualizada con las 5 materias, el código QR escaneable y el hash criptográfico `SHA-256`. |
-| **04:00 – 05:00** | **5. Chatbot Híbrido `USCO-Bot IA` y Consola Admin Multi-Sede:** Abrir el widget flotante, probar una consulta rápida en modo determinista (`< 5 ms`), luego cambiar a `/login`, entrar como **Admin Multi-Sede (`admin@usco.edu.co`)**, filtrar por sedes (`NEI`, `PIT`, `GAR`, `LPL`) y editar una nota en vivo. | Resaltar la telemetría en vivo de las colas `BullMQ` en el panel de administración y cómo el patrón `Strategy + Circuit Breaker` garantiza disponibilidad del 100% en el Chatbot. |
+| **04:00 – 05:00** | **5. Chatbot Híbrido `USCO-Bot IA` y Consola Admin Multi-Sede:** Abrir el widget flotante, probar una consulta rápida en modo determinista (`< 5 ms`), luego cambiar a `/login`, entrar como **docente** y editar una nota (la fila queda en ámbar hasta guardar), y luego como **admin** filtrar por sedes. | Resaltar la telemetría en vivo de las colas `BullMQ` en el panel de administración y cómo el patrón `Strategy + Circuit Breaker` garantiza disponibilidad del 100% en el Chatbot. |
 
 ---
 
@@ -174,7 +165,7 @@
 ### Pregunta 3 (Sistemas Distribuidos / Base de Datos): *¿Cómo evitan exactamente la condición de carrera (Race Condition) cuando 50 estudiantes intentan inscribir el último cupo al mismo milisegundo?*
 > **Respuesta Técnica:** Implementamos una defensa en doble capa dentro de `PrismaAcademicRepository.executeAtomicEnrollment`:
 > 1. Ejecutamos una transacción interactiva ACID (`prisma.$transaction`) que realiza una actualización atómica condicional (`UPDATE course_sections SET occupied_quota = occupied_quota + 1 WHERE id = $1 AND occupied_quota < max_quota`). En PostgreSQL, esta sentencia adquiere un bloqueo exclusivo a nivel de fila (*Row-Level Lock*) durante el microsegundo de actualización.
-> 2. Además, en `init_supabase_rls.sql` definimos la restricción física `CHECK ("occupied_quota" >= 0 AND "occupied_quota" <= "max_quota")`. Si el cupo ya llegó al límite, la transacción hace *rollback* inmediato y devuelve `409 Conflict (QUOTA_EXCEEDED)` sin bloquear las demás secciones.
+> 2. Si la actualización no afecta ninguna fila (el cupo ya se llenó), la transacción hace *rollback* y responde `409 Conflict (QUOTA_EXCEEDED)`. Lo comprobamos: 4 estudiantes simultáneos por 1 cupo dieron `1 × 201`, `3 × 409` y el cupo quedó en `13/13`. (El `CHECK` de `init_supabase_rls.sql` sería una tercera barrera al aplicarse ese script en Supabase.)
 
 ### Pregunta 4 (Sistemas Distribuidos): *¿Qué ocurre si el microservicio `async-worker-service` (Puerto 4002) se reinicia a mitad de la generación de un certificado PDF?*
 > **Respuesta Técnica:** Primero, Redis está configurado en `docker-compose.yml` con persistencia `Append-Only File (--appendonly yes)` y política `noeviction`, por lo que ningún trabajo encolado se pierde en RAM. Segundo, `BullMQ` maneja confirmaciones explícitas (*acknowledgements*) y reintentos con *exponential backoff*: si el contenedor Worker cae antes de marcar el trabajo como completado, el trabajo vuelve a ser tomado automáticamente al reiniciar. Tercero, implementamos un mecanismo de **regeneración idempotente bajo demanda** (`resolveAndSendPdf` en `async-worker-service`): si un usuario solicita descargar un certificado cuyo archivo PDF aún no está en disco, el Worker consulta el registro en PostgreSQL, lo renderiza en caliente de forma idempotente y lo sirve con su firma `SHA-256` intacta.
@@ -185,7 +176,7 @@
 > 2. **Para garantizar disponibilidad del 100%:** Implementamos el patrón **Strategy combinado con un Circuit Breaker** en `ProcessAcademicChatUseCase`. Si la API de Gemini o Groq no tiene llave configurada, supera el umbral de fallos o presenta latencia alta, el `Circuit Breaker` abre el circuito y delega instantáneamente la petición al `DeterministicRuleEngineAdapter`, que resuelve la consulta en **menos de 5 milisegundos** usando expresiones regulares ponderadas y álgebra exacta.
 
 ### Pregunta 6 (Seguridad / Mantenimiento): *¿Cómo previenen que un estudiante autenticado modifique el UUID en la URL para descargar el boletín de notas o el certificado de otro compañero (Vulnerabilidad IDOR — OWASP A01)?*
-> **Respuesta Técnica:** Implementamos el middleware `studentIdorGuardMiddleware` en `core-academic-service` y políticas **Row-Level Security (RLS)** en PostgreSQL (`init_supabase_rls.sql`). Cuando un usuario con rol `STUDENT` invoca `GET /api/v1/students/:id/summary` o `GET /api/v1/certificates/student/:studentId`, el middleware extrae el `userId` y `studentCode` firmados dentro del token JWT (`req.user`) y los compara contra el parámetro solicitado. Si no coinciden, la petición es bloqueada inmediatamente con código `403 Forbidden (IDOR_ACCESS_DENIED)` antes de tocar la base de datos.
+> **Respuesta Técnica:** El middleware `studentIdorGuardMiddleware` exige siempre un JWT válido (o el token interno de servicio, que el navegador nunca conoce). Cuando un usuario con rol `STUDENT` invoca `GET /api/v1/students/:id/summary` o `GET /api/v1/certificates/student/:studentId`, el middleware extrae el `userId` y `studentCode` firmados dentro del token JWT (`req.user`) y los compara contra el parámetro solicitado. Si no coinciden, la petición es bloqueada inmediatamente con código `403 Forbidden (IDOR_ACCESS_DENIED)` antes de tocar la base de datos. Lo mismo aplica a la solicitud de certificados, al chatbot (que toma el estudiante del token e ignora el `studentId` del cuerpo) y a la ruta de descarga del portal. Nuestra auditoría de caja negra prueba estos casos en cada push.
 
 ### Pregunta 7 (Seguridad / Criptografía): *¿Cómo puede una entidad externa verificar que un certificado PDF descargado desde EduDistribuida es auténtico y no fue adulterado con un editor de PDFs?*
 > **Respuesta Técnica:** Cada certificado incluye dos mecanismos de autenticidad verificables generados en `packages/database` y `async-worker-service`:
@@ -196,10 +187,11 @@
 > **Respuesta Técnica:** En regiones del Huila con conectividad móvil variable (como zonas rurales cercanas a Pitalito, Garzón o La Plata), enviar un bundle monolítico de JavaScript de varios megabytes penaliza el *First Contentful Paint (FCP)*. Con **Astro 5 SSR e Hidratación Parcial (Islands Architecture)**, el servidor entrega la estructura HTML e indicadores KPI ya renderizados desde el primer paquete TCP, e hidrata en el navegador únicamente los componentes interactivos (`GradesTableIsland`, `CourseEnrollmentIsland`, `AsyncCertificateIsland`, `ChatbotWidget`), logrando tiempos de carga inferiores a `15 ms`.
 
 ### Pregunta 9 (Mantenimiento y Pruebas de Software): *¿Cómo está estructurada la pirámide de pruebas del proyecto y cómo se asegura que no existan regresiones?*
-> **Respuesta Técnica:** Nuestra estrategia de aseguramiento de calidad cubre todos los niveles de la pirámide en el directorio `qa-audits/`:
-> 1. **Pruebas de Dominio y Contratos Hexagonales:** Verificación matemática de la regla `30% + 30% + 40%`, topes de créditos y control de cupos.
-> 2. **Pruebas No Funcionales Automatizadas:** Suite de carga y concurrencia con **k6** (`qa-audits/performance-k6/`), auditoría ofensiva de los 10 riesgos **OWASP Top 10:2021** (`qa-audits/security-owasp/`) y auditoría de **10 Heurísticas de Nielsen + WCAG 2.1 AA** (`qa-audits/usability-heuristics/`).
-> 3. **Pruebas de Aceptación End-to-End (E2E):** Suite completa en **Playwright** (`qa-audits/e2e-playwright/`) que valida los 5 flujos críticos (`E2E-01` a `E2E-05`).
+> **Respuesta Técnica:**
+> 1. **Dominio:** reglas 30/30/40, cupo, doble matrícula y tope de 21 créditos en servicios de dominio puros (sin infraestructura).
+> 2. **No funcionales contra el sistema real:** OWASP de caja negra (`npm run test:security`, 29 controles), carga (`npm run test:load`) y accesibilidad con axe-core (`npm run test:a11y`).
+> 3. **Aceptación E2E:** Playwright con 5 flujos críticos (`npm run test:e2e`).
+> 4. **Regresión:** la CI levanta PostgreSQL, Redis y los 4 servicios en cada push y ejecuta E2E + OWASP. Aprendimos que una suite que no golpea el sistema real no previene regresiones: la versión anterior aprobaba al 100 % con el control de acceso roto.
 
 ### Pregunta 10 (DevOps / Escalabilidad): *Si la Universidad Surcolombiana decide escalar el sistema de 4 sedes a 20 sedes nacionales durante la semana de matrículas, ¿qué componente se debe escalar horizontalmente y cómo lo soporta su arquitectura?*
 > **Respuesta Técnica:** Dado que nuestros tres microservicios (`core-academic-service`, `async-worker-service` y `chatbot-ai-service`) son **100% *stateless*** (toda la sesión viaja en tokens JWT firmados y el estado reside en PostgreSQL y Redis), podemos escalar horizontalmente de forma independiente:

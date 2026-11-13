@@ -1,4 +1,10 @@
 /**
+ * ⚠️  AVISO (auditoría de noviembre 2026): las puntuaciones de Nielsen de este script
+ * están escritas a mano en el código (no se calculan). Solo los conteos de atributos
+ * y la matriz de contraste son mediciones. Use run-a11y-axe.mjs (npm run test:a11y)
+ * y la evaluación heurística experta del informe de Fase 4.
+ */
+/**
  * ============================================================================
  * EDUDISTRIBUIDA / USCO-NET — AUDITORÍA HEURÍSTICA DE USABILIDAD Y WCAG 2.1 AA
  * Archivo: qa-audits/usability-heuristics/run-usability-audit.mjs

@@ -17,51 +17,82 @@
 
 ---
 
-## 2. Mapa de Entregables por Fase (100% Completados)
+## 2. Mapa de entregables por fase
 
-| Fase | Entregable Oficial | Ruta en el Monorepo |
+> Auditoría integral del 13 de noviembre de 2026: [`docs/00_Auditoria_Integral_Proyecto.md`](./docs/00_Auditoria_Integral_Proyecto.md) (cumplimiento del enunciado, hallazgos, correcciones y riesgos pendientes).
+
+| Fase | Entregable | Ruta |
 | :--- | :--- | :--- |
-| **Fase 1** | Especificación de Arquitectura C4 (Niveles 1, 2, 3), Diagramas de Secuencia y 5 ADRs | [`docs/fase1-arquitectura/01_Especificacion_Arquitectura_C4_Hexagonal.md`](./docs/fase1-arquitectura/01_Especificacion_Arquitectura_C4_Hexagonal.md) |
-| **Fase 2** | Esquema Prisma, DDL/RLS Supabase, Seed Multi-Sede, Core Service (`:4001`), Worker (`:4002`) y Web Astro SSR (`:4321`) | [`packages/database/`](./packages/database/), [`apps/core-academic-service/`](./apps/core-academic-service/), [`apps/async-worker-service/`](./apps/async-worker-service/), [`apps/web-astro/`](./apps/web-astro/) |
-| **Fase 3** | Microservicio Conversacional Híbrido (`:4003`) y Widget Persistente Integrado | [`apps/chatbot-ai-service/`](./apps/chatbot-ai-service/), [`apps/web-astro/src/components/react/ChatbotWidget.tsx`](./apps/web-astro/src/components/react/ChatbotWidget.tsx) |
-| **Fase 4** | Auditoría de Rendimiento (`k6` + 3 Gráficos PNG), Seguridad (`OWASP Top 10`) y Usabilidad (`Nielsen / WCAG`) | [`docs/fase4-informe-calidad/04_Informe_Auditoria_Calidad_QA.md`](./docs/fase4-informe-calidad/04_Informe_Auditoria_Calidad_QA.md), [`qa-audits/`](./qa-audits/) |
-| **Fase 5** | Contenerización Docker Compose, Suite E2E Playwright, Manual Técnico, Manual de Usuario y Defensa Final | [`docker-compose.yml`](./docker-compose.yml), [`qa-audits/e2e-playwright/`](./qa-audits/e2e-playwright/), [`docs/fase5-manuales-y-defensa/`](./docs/fase5-manuales-y-defensa/) |
+| **Fase 1** | Especificación C4 (niveles 1-3), secuencias, 5 ADR y actualización post-auditoría | [`docs/fase1-arquitectura/`](./docs/fase1-arquitectura/01_Especificacion_Arquitectura_C4_Hexagonal.md) |
+| **Fase 2** | Núcleo: Core (`:4001`), Worker (`:4002`), portal Astro (`:4321`), Prisma, JWT, pagos y notificaciones, matriz de control de acceso | [`docs/fase2-plataforma-integrada/`](./docs/fase2-plataforma-integrada/02_Construccion_Nucleo_Plataforma.md), [`apps/`](./apps/), [`packages/database/`](./packages/database/) |
+| **Fase 3** | Asistente académico híbrido (`:4003`) integrado en el panel del estudiante | [`docs/fase3-chatbot/`](./docs/fase3-chatbot/03_Automatizacion_Conversacional.md), [`apps/chatbot-ai-service/`](./apps/chatbot-ai-service/) |
+| **Fase 4** | Informe de calidad v2.0 con mediciones reales: carga, OWASP de caja negra, heurísticas y axe-core | [`docs/fase4-informe-calidad/`](./docs/fase4-informe-calidad/04_Informe_Auditoria_Calidad_QA.md), [`qa-audits/`](./qa-audits/) |
+| **Fase 5** | Docker Compose, E2E Playwright, manual técnico, manual de usuario, guion de defensa | [`docker-compose.yml`](./docker-compose.yml), [`docs/fase5-manuales-y-defensa/`](./docs/fase5-manuales-y-defensa/) |
+
+### Resultados verificados contra el sistema en ejecución
+
+| Prueba | Comando | Resultado |
+| :--- | :--- | :--- |
+| Aceptación E2E (5 flujos) | `npm run test:e2e` | 5/5 |
+| OWASP Top 10 de caja negra (29 controles) | `npm run test:security` | 29/29 (línea base: 11/29) |
+| Carga 10 → 50 → 100 usuarios | `npm run test:load` | 0 % errores · p95 15–177 ms |
+| Accesibilidad WCAG 2.1 A/AA | `npm run test:a11y` | 0 violaciones (línea base: 42) |
 
 ---
 
-## 3. Credenciales Institucionales Demo (Contraseña común: `Usco2026*`)
+## 3. Credenciales demo (contraseña común: `Usco2026*`)
 
-| Rol | Correo Institucional | Código / Documento | Sede |
-| :--- | :--- | :--- | :--- |
-| **Estudiante** | `alvaro.andrade@usco.edu.co` | Cód: `20221203806` / Doc: `1075289412` | Sede Central Neiva (`NEI`) |
-| **Docente** | `docente.software@usco.edu.co` | Doc: `1075210200` | Sede Central Neiva (`NEI`) |
-| **Administrador Multi-Sede** | `admin@usco.edu.co` | Doc: `1075200100` | Multi-Sede (`NEI`, `PIT`, `GAR`, `LPL`) |
+| Rol | Correo | Alcance |
+| :--- | :--- | :--- |
+| **Estudiante** | `alvaro.andrade@usco.edu.co` | Su propio expediente (Cód. `20221203806`, sede Neiva) |
+| **Docente** | `docente.software@usco.edu.co` | Sus grupos en Neiva |
+| **Docente regional** | `docente.regional@usco.edu.co` | Sus grupos en Pitalito, Garzón y La Plata |
+| **Administrador** | `admin@usco.edu.co` | Las 4 sedes |
 
 ---
 
-## 4. Comandos Rápidos de Ejecución y Verificación
+## 4. Ejecución
+
+Requisitos: Node 20.12+ (recomendado 22), PostgreSQL 16 y Redis 7 (o Docker).
 
 ```bash
-# 1. Generar cliente Prisma, sincronizar esquema y poblar las 4 sedes en PostgreSQL
-npm run db:generate
-npm run db:push
-npm run db:seed
+cp .env.example .env
+```
 
-# 2. Compilar todos los paquetes y microservicios del monorepo
-npm run build:all
+```bash
+npm install
+```
 
-# 3. Levantar los servicios en desarrollo
-npm run dev:core     # http://localhost:4001 (Swagger en /api/docs)
-npm run dev:worker   # http://localhost:4002 (Métricas en /metrics/queues)
-npm run dev:chatbot  # http://localhost:4003 (Swagger en /api/docs)
-npm run dev:web      # http://localhost:4321 (Frontend Astro SSR)
+```bash
+npm run db:generate && npm run db:push && npm run db:seed
+```
 
-# 4. Ejecutar las suites de auditoría QA, OWASP Top 10, Rendimiento y E2E
-npm run test:security
-node qa-audits/performance-k6/run-benchmark-and-charts.mjs
-node qa-audits/usability-heuristics/run-usability-audit.mjs
-node qa-audits/e2e-playwright/verify-e2e-flows.mjs
+En cuatro terminales:
 
-# 5. Despliegue contenerizado completo con Docker Compose (6 contenedores)
+```bash
+npm run dev:core      # http://localhost:4001  (Swagger en /api/docs)
+```
+
+```bash
+npm run dev:worker    # http://localhost:4002  (métricas en /metrics/queues)
+```
+
+```bash
+npm run dev:chatbot   # http://localhost:4003  (Swagger en /api/docs)
+```
+
+```bash
+npm run dev:web       # http://localhost:4321
+```
+
+Pruebas (con todo lo anterior en ejecución; la de seguridad al final, porque bloquea el login 60 s):
+
+```bash
+npm run test:e2e && npm run test:load && npm run test:a11y && npm run test:security
+```
+
+Con Docker (requiere definir `SUPABASE_JWT_SECRET`, `INTERNAL_SERVICE_TOKEN` y `PAYMENT_WEBHOOK_SECRET` en `.env`, p. ej. con `openssl rand -hex 32`):
+
+```bash
 npm run docker:up
 ```
